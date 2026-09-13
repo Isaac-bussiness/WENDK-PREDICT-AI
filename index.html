@@ -3,140 +3,116 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="WENDK PREDICT PRO — analyses et indications premium de matchs sportifs.">
-  <title>WENDK PREDICT PRO</title>
+  <meta name="description" content="WENDK PREDICT PRO — espace membre et indications premium.">
+  <title>WENDK PREDICT PRO — V2</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="topbar">⚡ WENDK PREDICT PRO — Analyses premium de matchs</div>
+  <div class="topbar">⚡ WENDK PREDICT PRO — Espace membre & analyses Premium</div>
 
   <header class="header">
-    <a class="logo" href="#accueil">
-      <span class="logo-mark">W</span>
-      <span>WENDK <b>PREDICT</b><small>PRO</small></span>
-    </a>
+    <a class="logo" href="#accueil"><span class="logo-mark">W</span><span>WENDK <b>PREDICT</b><small>PRO</small></span></a>
     <nav>
-      <a href="#accueil">Accueil</a>
-      <a href="#matchs">Matchs</a>
-      <a href="#premium">Premium</a>
-      <a href="#faq">FAQ</a>
+      <a href="#accueil">Accueil</a><a href="#matchs">Matchs</a><a href="#premium">Premium</a><a href="#dashboard">Mon espace</a>
     </nav>
-    <button class="btn btn-gold" data-scroll="#premium">Devenir Premium</button>
+    <div class="header-actions">
+      <button class="btn btn-outline" id="loginBtn">Connexion</button>
+      <button class="btn btn-gold" id="signupBtn">Créer un compte</button>
+    </div>
   </header>
 
   <main id="accueil">
     <section class="hero">
       <div class="hero-copy">
-        <div class="eyebrow">🤖 ANALYSE • DONNÉES • INDICATIONS</div>
-        <h1>Des analyses plus claires.<br><span>Des indications premium.</span></h1>
-        <p>Accède à nos analyses de matchs et à nos indications Premium dans une interface simple, rapide et pensée pour mobile.</p>
+        <div class="eyebrow">🤖 ANALYSE • DONNÉES • PREMIUM</div>
+        <h1>Ton espace pour des <span>indications premium.</span></h1>
+        <p>Crée ton compte, choisis une formule et retrouve tes analyses dans ton espace membre. Cette V2 fonctionne en démonstration locale et prépare l'intégration du paiement réel.</p>
         <div class="hero-actions">
-          <button class="btn btn-gold" data-scroll="#premium">🔒 Voir les offres</button>
+          <button class="btn btn-gold" id="heroSignup">Créer mon compte</button>
           <button class="btn btn-outline" data-scroll="#matchs">Voir les matchs</button>
         </div>
-        <div class="trust">
-          <span>✓ Interface mobile</span><span>✓ Accès Premium</span><span>✓ Analyses détaillées</span>
-        </div>
+        <div class="trust"><span>✓ Compte membre</span><span>✓ Statut Premium</span><span>✓ Expiration automatique</span></div>
       </div>
       <div class="hero-card">
-        <div class="card-head"><span>🔥 PREMIUM DU JOUR</span><span class="live-dot">●</span></div>
-        <div class="match-big">
-          <div class="team"><div class="crest">RM</div><b>Real Madrid</b></div>
-          <div class="vs">VS</div>
-          <div class="team"><div class="crest">FCB</div><b>Barcelona</b></div>
+        <div class="card-head"><span>🔐 ESPACE PREMIUM</span><span class="live-dot">● ACTIF</span></div>
+        <div class="member-preview">
+          <div class="avatar">W</div>
+          <div><b>Membre Premium</b><small>Accès aux analyses privées</small></div>
         </div>
-        <div class="locked-analysis">
-          <span>🔐</span>
-          <div><b>Indication Premium</b><small>Débloque ton accès pour voir l'analyse.</small></div>
-          <button class="mini-btn" data-scroll="#premium">Débloquer</button>
-        </div>
+        <div class="progress-box"><div><span>Abonnement</span><b>PREMIUM</b></div><div class="progress"><i></i></div><small>Activation automatique après confirmation du paiement</small></div>
       </div>
     </section>
 
     <section class="stats">
-      <div><b>24/7</b><span>Plateforme accessible</span></div>
-      <div><b>⚽</b><span>Matchs analysés</span></div>
-      <div><b>PRO</b><span>Zone Premium</span></div>
-      <div><b>📱</b><span>100% mobile</span></div>
+      <div><b>24/7</b><span>Accès à ton espace</span></div><div><b>🔒</b><span>Contenu Premium</span></div>
+      <div><b>⚡</b><span>Activation rapide</span></div><div><b>📱</b><span>Mobile & ordinateur</span></div>
     </section>
 
     <section class="section" id="matchs">
       <div class="section-title">
         <div><span class="eyebrow">PROGRAMME</span><h2>Matchs du jour</h2></div>
-        <div class="filters">
-          <button class="filter active" data-filter="all">Tous</button>
-          <button class="filter" data-filter="football">Football</button>
-          <button class="filter" data-filter="premium">Premium</button>
-        </div>
+        <div class="filters"><button class="filter active" data-filter="all">Tous</button><button class="filter" data-filter="free">Gratuits</button><button class="filter" data-filter="premium">Premium</button></div>
       </div>
       <div class="match-grid" id="matchGrid"></div>
     </section>
 
+    <section class="dashboard section" id="dashboard">
+      <div class="section-title"><div><span class="eyebrow">ESPACE PERSONNEL</span><h2>Mon espace membre</h2></div></div>
+      <div id="loggedOutPanel" class="empty-account">
+        <div class="big-icon">👤</div><h3>Connecte-toi pour accéder à ton espace</h3><p>Ton tableau de bord affichera ton statut, ta formule et la date d'expiration.</p>
+        <button class="btn btn-gold" id="dashboardLogin">Se connecter</button>
+      </div>
+
+      <div id="memberPanel" class="member-panel hidden">
+        <div class="profile-card">
+          <div class="profile-head"><div class="avatar large" id="memberAvatar">W</div><div><span class="eyebrow">MEMBRE</span><h3 id="memberName">Membre</h3><p id="memberContact"></p></div><button class="btn btn-outline logout" id="logoutBtn">Déconnexion</button></div>
+          <div class="status-row">
+            <div><small>STATUT</small><b id="memberStatus">GRATUIT</b></div>
+            <div><small>FORMULE</small><b id="memberPlan">Aucune</b></div>
+            <div><small>EXPIRATION</small><b id="memberExpiry">—</b></div>
+          </div>
+        </div>
+        <div class="dashboard-grid">
+          <div class="dash-card"><span class="eyebrow">ACCÈS</span><h3 id="accessTitle">Compte gratuit</h3><p id="accessText">Choisis une formule Premium pour débloquer les analyses réservées.</p><button class="btn btn-gold" data-scroll="#premium" id="upgradeBtn">Passer Premium</button></div>
+          <div class="dash-card"><span class="eyebrow">HISTORIQUE</span><h3>Abonnement</h3><div id="history"><p>Aucun abonnement enregistré.</p></div></div>
+        </div>
+      </div>
+    </section>
+
     <section class="premium-section" id="premium">
-      <div class="premium-copy">
-        <span class="eyebrow">🔐 WENDK PREDICT PRO</span>
-        <h2>Passe en mode <span>Premium</span>.</h2>
-        <p>Choisis une formule pour accéder aux analyses premium. Les paiements réels seront branchés à ton prestataire de paiement lors de l'étape suivante.</p>
-        <ul>
-          <li>✓ Indications Premium</li>
-          <li>✓ Analyses détaillées</li>
-          <li>✓ Historique des analyses</li>
-          <li>✓ Accès depuis téléphone et ordinateur</li>
-        </ul>
-      </div>
+      <div class="premium-copy"><span class="eyebrow">🔐 FORMULES PREMIUM</span><h2>Choisis ton <span>accès.</span></h2><p>Après paiement confirmé, le backend pourra enregistrer l'abonnement et activer automatiquement ton compte.</p><ul><li>✓ Indications Premium</li><li>✓ Analyses détaillées</li><li>✓ Historique</li><li>✓ Accès mobile</li></ul></div>
       <div class="plans">
-        <article class="plan">
-          <span class="plan-label">24 HEURES</span><h3>Journalière</h3><div class="price">1 000 <small>FCFA</small></div>
-          <button class="btn btn-dark" data-plan="Journalière — 1 000 FCFA">Choisir</button>
-        </article>
-        <article class="plan featured">
-          <div class="popular">POPULAIRE</div><span class="plan-label">7 JOURS</span><h3>Hebdomadaire</h3><div class="price">5 000 <small>FCFA</small></div>
-          <button class="btn btn-gold" data-plan="Hebdomadaire — 5 000 FCFA">Choisir</button>
-        </article>
-        <article class="plan">
-          <span class="plan-label">30 JOURS</span><h3>Mensuelle</h3><div class="price">15 000 <small>FCFA</small></div>
-          <button class="btn btn-dark" data-plan="Mensuelle — 15 000 FCFA">Choisir</button>
-        </article>
+        <article class="plan"><span class="plan-label">24 HEURES</span><h3>Journalière</h3><div class="price">1 000 <small>FCFA</small></div><button class="btn btn-dark planBtn" data-plan="Journalière" data-price="1000" data-days="1">Choisir</button></article>
+        <article class="plan featured"><div class="popular">POPULAIRE</div><span class="plan-label">7 JOURS</span><h3>Hebdomadaire</h3><div class="price">5 000 <small>FCFA</small></div><button class="btn btn-gold planBtn" data-plan="Hebdomadaire" data-price="5000" data-days="7">Choisir</button></article>
+        <article class="plan"><span class="plan-label">30 JOURS</span><h3>Mensuelle</h3><div class="price">15 000 <small>FCFA</small></div><button class="btn btn-dark planBtn" data-plan="Mensuelle" data-price="15000" data-days="30">Choisir</button></article>
       </div>
     </section>
 
-    <section class="section how">
-      <div class="section-title"><div><span class="eyebrow">SIMPLE & RAPIDE</span><h2>Comment ça marche ?</h2></div></div>
-      <div class="steps">
-        <div><b>01</b><h3>Choisis ton offre</h3><p>Sélectionne la durée d'accès qui te convient.</p></div>
-        <div><b>02</b><h3>Effectue le paiement</h3><p>Le paiement sécurisé sera intégré à la prochaine étape.</p></div>
-        <div><b>03</b><h3>Accède au Premium</h3><p>Ton espace Premium affiche les analyses réservées.</p></div>
-      </div>
+    <section class="section how"><div class="section-title"><div><span class="eyebrow">PARCOURS</span><h2>Comment ça marche ?</h2></div></div>
+      <div class="steps"><div><b>01</b><h3>Crée ton compte</h3><p>Renseigne ton nom, contact et mot de passe.</p></div><div><b>02</b><h3>Choisis Premium</h3><p>Sélectionne la durée de ton abonnement.</p></div><div><b>03</b><h3>Paiement confirmé</h3><p>Le serveur active automatiquement l'accès et fixe la date d'expiration.</p></div></div>
     </section>
 
-    <section class="section faq" id="faq">
-      <div class="section-title"><div><span class="eyebrow">BESOIN D'AIDE ?</span><h2>Questions fréquentes</h2></div></div>
-      <details><summary>Les indications garantissent-elles un gain ?</summary><p>Non. Une prédiction sportive reste une analyse et ne garantit jamais un résultat ni un gain.</p></details>
-      <details><summary>Le site fonctionne-t-il sur téléphone ?</summary><p>Oui. L'interface est conçue en priorité pour les écrans mobiles.</p></details>
-      <details><summary>Comment le paiement sera-t-il ajouté ?</summary><p>Le bouton de paiement actuel prépare le parcours. Nous pourrons ensuite connecter PayDunya, Mobile Money ou un autre prestataire compatible.</p></details>
+    <section class="section faq"><div class="section-title"><div><span class="eyebrow">FAQ</span><h2>Questions fréquentes</h2></div></div>
+      <details><summary>Le Premium garantit-il un gain ?</summary><p>Non. Les indications sont des analyses et ne garantissent ni résultat sportif ni gain.</p></details>
+      <details><summary>Mes données sont-elles réellement sécurisées dans cette V2 ?</summary><p>Cette V2 utilise localStorage pour la démonstration. Avant une mise en production, il faut un backend, un stockage sécurisé des mots de passe et une authentification serveur.</p></details>
+      <details><summary>Le paiement est-il déjà automatique ?</summary><p>Non. Le parcours membre est prêt, mais l'activation réellement déclenchée par un paiement nécessite un prestataire de paiement et un webhook côté serveur.</p></details>
     </section>
   </main>
 
-  <footer>
-    <div><a class="logo" href="#accueil"><span class="logo-mark">W</span><span>WENDK <b>PREDICT</b><small>PRO</small></span></a><p>Analyses sportives & indications premium.</p></div>
-    <div><b>Important</b><p>18+ uniquement. Les analyses ne constituent pas une garantie de gain. Jouez de manière responsable.</p></div>
-    <div><b>Contact</b><p>WhatsApp : +226 07309472</p></div>
-  </footer>
+  <footer><div><a class="logo" href="#accueil"><span class="logo-mark">W</span><span>WENDK <b>PREDICT</b><small>PRO</small></span></a><p>Analyses sportives & indications Premium.</p></div><div><b>Responsabilité</b><p>18+ uniquement. Aucune garantie de gain. Jouez de manière responsable.</p></div><div><b>Contact</b><p>WhatsApp : +226 07309472</p></div></footer>
 
-  <div class="modal" id="paymentModal" aria-hidden="true">
-    <div class="modal-box">
-      <button class="close" id="closeModal">×</button>
-      <span class="eyebrow">OFFRE SÉLECTIONNÉE</span>
-      <h2 id="selectedPlan">Premium</h2>
-      <p>Le paiement réel n'est pas encore connecté. Cette étape est prête pour recevoir ton moyen de paiement.</p>
-      <div class="demo-payment">
-        <span>💳</span><div><b>Paiement sécurisé</b><small>PayDunya / Mobile Money à connecter</small></div>
-      </div>
-      <button class="btn btn-gold full" id="contactPayment">Demander l'activation</button>
-      <small class="modal-note">Après connexion du paiement, ce bouton pourra déclencher automatiquement l'activation de l'abonnement.</small>
-    </div>
-  </div>
+  <div class="modal" id="authModal" aria-hidden="true"><div class="modal-box"><button class="close" data-close="authModal">×</button><div class="auth-tabs"><button class="auth-tab active" data-auth="login">Connexion</button><button class="auth-tab" data-auth="signup">Créer un compte</button></div>
+    <form id="authForm">
+      <div id="nameField" class="field hidden"><label>Nom complet</label><input id="nameInput" type="text" autocomplete="name" placeholder="Ex. Jean Kaboré"></div>
+      <div class="field"><label>Téléphone ou email</label><input id="contactInput" type="text" autocomplete="username" placeholder="Ex. 70 00 00 00" required></div>
+      <div class="field"><label>Mot de passe</label><input id="passwordInput" type="password" autocomplete="current-password" placeholder="••••••••" required></div>
+      <button class="btn btn-gold full" id="authSubmit" type="submit">Se connecter</button><p class="form-note" id="authMessage"></p>
+    </form>
+  </div></div>
 
+  <div class="modal" id="paymentModal" aria-hidden="true"><div class="modal-box"><button class="close" data-close="paymentModal">×</button><span class="eyebrow">SOUSCRIPTION</span><h2 id="selectedPlan">Premium</h2><p id="paymentText"></p><div class="demo-payment"><span>💳</span><div><b>Paiement réel à connecter</b><small>PayDunya / Mobile Money + webhook serveur</small></div></div><button class="btn btn-gold full" id="requestActivation">Demander l'activation</button><small class="modal-note">Mode démo : aucune transaction n'est débitée et l'activation locale ne remplace pas une confirmation de paiement.</small></div></div>
+
+  <div class="toast" id="toast"></div>
   <script src="script.js"></script>
 </body>
 </html>
