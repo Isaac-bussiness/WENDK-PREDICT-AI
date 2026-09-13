@@ -1,4 +1,18 @@
 "use strict";
+/* =========================================================
+   CONNEXION SUPABASE — WENDK PREDICT PRO
+========================================================= */
+
+const SUPABASE_URL = "https://ujhghwjdecmuuqvllock.supabase.co";
+
+const SUPABASE_KEY = "sb_publishable_1luIJ43-R4_FXbjFuHrdiA_nLc5CEoO";
+
+const supabaseClient = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+console.log("WENDK PREDICT PRO — Supabase connecté");
 
 /* =========================================================
    WENDK PREDICT PRO V3
