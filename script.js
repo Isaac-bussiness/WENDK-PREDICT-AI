@@ -1,94 +1,83 @@
 "use strict";
-/* =========================================================
-   CONNEXION SUPABASE — WENDK PREDICT PRO
-========================================================= */
-
-const SUPABASE_URL = "https://ujhghwjdecmuuqvllock.supabase.co";
-
-const SUPABASE_KEY = "sb_publishable_1luIJ43-R4_FXbjFuHrdiA_nLc5CEoO";
-
-const supabaseClient = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
-);
-
-console.log("WENDK PREDICT PRO — Supabase connecté");
 
 /* =========================================================
    WENDK PREDICT PRO V3
-   ESPACE MEMBRE + ADMIN + PREMIUM
+   SCRIPT.JS — BLOC 1/3
+   SUPABASE + AUTHENTIFICATION + PROFILS
 ========================================================= */
-
-const WHATSAPP_NUMBER = "22607309472";
-const WHATSAPP_URL = "https://wa.me/" + WHATSAPP_NUMBER;
 
 
 /* =========================================================
-   CONFIGURATION ADMIN
+   1. CONNEXION SUPABASE
 ========================================================= */
 
-const ADMIN_USERNAME = "admin";
-const ADMIN_PASSWORD = "WENDK2026";
+const SUPABASE_URL =
+  "https://ujhghwjdecmuuqvllock.supabase.co";
+
+const SUPABASE_KEY =
+  "sb_publishable_1luIJ43-R4_FXbjFuHrdiA_nLc5CEoO";
+
+const supabaseClient =
+  window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+
+console.log(
+  "WENDK PREDICT PRO — Supabase connecté"
+);
 
 
 /* =========================================================
-   CLÉS LOCALSTORAGE
+   2. CONFIGURATION
 ========================================================= */
 
-const USERS_KEY = "wendkPredictUsers";
-const PAYMENTS_KEY = "wendkPredictPayments";
-const CURRENT_USER_KEY = "wendkPredictCurrentUser";
-const ADMIN_SESSION_KEY = "wendkPredictAdminSession";
+const WHATSAPP_NUMBER =
+  "22607309472";
+
+const WHATSAPP_URL =
+  "https://wa.me/" +
+  WHATSAPP_NUMBER;
 
 
 /* =========================================================
-   OUTILS
+   3. OUTILS
 ========================================================= */
-
-function getUsers() {
-  return JSON.parse(localStorage.getItem(USERS_KEY) || "[]");
-}
-
-function saveUsers(users) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-}
-
-function getPayments() {
-  return JSON.parse(localStorage.getItem(PAYMENTS_KEY) || "[]");
-}
-
-function savePayments(payments) {
-  localStorage.setItem(PAYMENTS_KEY, JSON.stringify(payments));
-}
-
-function generateId(prefix = "id") {
-  return prefix + "_" + Date.now() + "_" +
-    Math.random().toString(36).substring(2, 8);
-}
 
 function formatDate(date) {
+
   if (!date) return "—";
 
-  return new Date(date).toLocaleDateString("fr-FR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric"
-  });
+  return new Date(date).toLocaleDateString(
+    "fr-FR",
+    {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric"
+    }
+  );
 }
+
 
 function formatDateTime(date) {
+
   if (!date) return "—";
 
-  return new Date(date).toLocaleString("fr-FR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
+  return new Date(date).toLocaleString(
+    "fr-FR",
+    {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    }
+  );
 }
 
+
 function escapeHTML(value) {
+
   return String(value ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -98,1547 +87,754 @@ function escapeHTML(value) {
 }
 
 
+function showMessage(
+  elementId,
+  text,
+  className = "success-message"
+) {
+
+  const element =
+    document.getElementById(
+      elementId
+    );
+
+  if (!element) return;
+
+  element.className =
+    className;
+
+  element.textContent =
+    text;
+}
+
+
 /* =========================================================
-   NAVIGATION
+   4. NAVIGATION
 ========================================================= */
 
 function showSection(sectionId) {
 
-  document.querySelectorAll(".section").forEach(section => {
-    section.classList.remove("active");
-  });
+  document
+    .querySelectorAll(".section")
+    .forEach(section => {
 
-  const section = document.getElementById(sectionId);
+      section.classList.remove(
+        "active"
+      );
+
+    });
+
+
+  const section =
+    document.getElementById(
+      sectionId
+    );
+
 
   if (!section) return;
 
-  section.classList.add("active");
+
+  section.classList.add(
+    "active"
+  );
+
 
   window.scrollTo({
     top: 0,
     behavior: "smooth"
   });
 
-  if (sectionId === "memberDashboard") {
+
+  if (
+    sectionId ===
+    "memberDashboard"
+  ) {
+
     renderMemberDashboard();
+
   }
 
-  if (sectionId === "adminDashboard") {
 
-    if (!isAdminLogged()) {
-      showSection("adminLogin");
-      return;
-    }
+  if (
+    sectionId ===
+    "adminDashboard"
+  ) {
 
     renderAdminDashboard();
+
   }
 
-  if (sectionId === "predictions") {
+
+  if (
+    sectionId ===
+    "predictions"
+  ) {
+
     renderPredictions();
+
   }
+
 }
 
 
 /* =========================================================
-   INSCRIPTION
+   5. UTILISATEUR SUPABASE ACTUEL
 ========================================================= */
 
-function register(event) {
+async function getCurrentAuthUser() {
 
-  event.preventDefault();
+  try {
 
-  const name =
-    document.getElementById("registerName").value.trim();
+    const {
+      data,
+      error
+    } =
+      await supabaseClient.auth
+        .getUser();
 
-  const whatsapp =
-    document.getElementById("registerWhatsapp").value.trim();
 
-  const email =
-    document.getElementById("registerEmail")
-      .value.trim()
-      .toLowerCase();
+    if (error) {
 
-  const password =
-    document.getElementById("registerPassword").value;
+      console.error(
+        "Erreur utilisateur Supabase:",
+        error
+      );
 
-  const message =
-    document.getElementById("registerMessage");
+      return null;
 
-  const users = getUsers();
+    }
 
-  const existing =
-    users.find(user => user.email === email);
 
-  if (existing) {
+    return data?.user || null;
 
-    message.className = "error-message";
 
-    message.textContent =
-      "Un compte existe déjà avec cet email.";
+  } catch (error) {
 
-    return;
+    console.error(
+      "Erreur Auth:",
+      error
+    );
+
+    return null;
+
   }
 
-  const user = {
+}
 
-    id: generateId("user"),
 
-    name,
+/* =========================================================
+   6. RÉCUPÉRER LE PROFIL
+========================================================= */
 
-    whatsapp,
+async function getProfile(
+  userId
+) {
 
-    email,
+  if (!userId) return null;
 
-    password,
 
-    premium: false,
+  try {
 
-    premiumExpiresAt: null,
+    const {
+      data,
+      error
+    } =
+      await supabaseClient
+        .from("profiles")
+        .select("*")
+        .eq(
+          "id",
+          userId
+        )
+        .maybeSingle();
 
-    createdAt: new Date().toISOString(),
 
-    subscriptionHistory: []
+    if (error) {
+
+      console.error(
+        "Erreur profil:",
+        error
+      );
+
+      return null;
+
+    }
+
+
+    return data || null;
+
+
+  } catch (error) {
+
+    console.error(
+      "Erreur récupération profil:",
+      error
+    );
+
+    return null;
+
+  }
+
+}
+
+
+/* =========================================================
+   7. RÉCUPÉRER L'UTILISATEUR COMPLET
+========================================================= */
+
+async function getCurrentUser() {
+
+  const authUser =
+    await getCurrentAuthUser();
+
+
+  if (!authUser) {
+
+    return null;
+
+  }
+
+
+  const profile =
+    await getProfile(
+      authUser.id
+    );
+
+
+  /*
+    Si le profil existe :
+    on combine Auth + profiles.
+  */
+
+  if (profile) {
+
+    return {
+
+      ...profile,
+
+      email:
+        authUser.email || ""
+
+    };
+
+  }
+
+
+  /*
+    Sécurité de secours :
+    si le trigger n'a pas encore
+    créé le profil.
+  */
+
+  return {
+
+    id:
+      authUser.id,
+
+    name:
+      authUser.user_metadata?.name ||
+      "Membre",
+
+    whatsapp:
+      authUser.user_metadata?.whatsapp ||
+      "",
+
+    email:
+      authUser.email || "",
+
+    role:
+      "member"
 
   };
 
-  users.push(user);
-
-  saveUsers(users);
-
-  localStorage.setItem(
-    CURRENT_USER_KEY,
-    user.id
-  );
-
-  message.className = "success-message";
-
-  message.textContent =
-    "Compte créé avec succès.";
-
-  setTimeout(() => {
-    showSection("memberDashboard");
-  }, 700);
 }
 
 
 /* =========================================================
-   CONNEXION MEMBRE
+   8. INSCRIPTION MEMBRE
 ========================================================= */
 
-function login(event) {
+async function register(event) {
 
   event.preventDefault();
+
+
+  const name =
+    document
+      .getElementById(
+        "registerName"
+      )
+      .value
+      .trim();
+
+
+  const whatsapp =
+    document
+      .getElementById(
+        "registerWhatsapp"
+      )
+      .value
+      .trim();
+
 
   const email =
-    document.getElementById("loginEmail")
-      .value.trim()
+    document
+      .getElementById(
+        "registerEmail"
+      )
+      .value
+      .trim()
       .toLowerCase();
 
-  const password =
-    document.getElementById("loginPassword").value;
-
-  const message =
-    document.getElementById("loginMessage");
-
-  const users = getUsers();
-
-  const user =
-    users.find(
-      u =>
-        u.email === email &&
-        u.password === password
-    );
-
-  if (!user) {
-
-    message.className = "error-message";
-
-    message.textContent =
-      "Email ou mot de passe incorrect.";
-
-    return;
-  }
-
-  localStorage.setItem(
-    CURRENT_USER_KEY,
-    user.id
-  );
-
-  message.className =
-    "success-message";
-
-  message.textContent =
-    "Connexion réussie.";
-
-  setTimeout(() => {
-    showSection("memberDashboard");
-  }, 500);
-}
-
-
-/* =========================================================
-   UTILISATEUR COURANT
-========================================================= */
-
-function getCurrentUser() {
-
-  const id =
-    localStorage.getItem(
-      CURRENT_USER_KEY
-    );
-
-  if (!id) return null;
-
-  const users = getUsers();
-
-  return users.find(
-    user => user.id === id
-  ) || null;
-}
-
-
-/* =========================================================
-   VÉRIFICATION EXPIRATION
-========================================================= */
-
-function checkPremiumExpiration(user) {
-
-  if (!user) return null;
-
-  if (
-    user.premium &&
-    user.premiumExpiresAt &&
-    new Date(user.premiumExpiresAt).getTime()
-      <= Date.now()
-  ) {
-
-    user.premium = false;
-
-    user.premiumExpiredAt =
-      new Date().toISOString();
-
-    const users = getUsers();
-
-    const index =
-      users.findIndex(
-        u => u.id === user.id
-      );
-
-    if (index !== -1) {
-
-      users[index] = user;
-
-      saveUsers(users);
-    }
-  }
-
-  return user;
-}
-
-
-/* =========================================================
-   DASHBOARD MEMBRE
-========================================================= */
-
-function renderMemberDashboard() {
-
-  let user = getCurrentUser();
-
-  if (!user) {
-
-    showSection("login");
-
-    return;
-  }
-
-  user = checkPremiumExpiration(user);
-
-  document.getElementById(
-    "memberWelcome"
-  ).textContent =
-    "Bienvenue, " + user.name;
-
-  document.getElementById(
-    "memberWhatsapp"
-  ).textContent =
-    user.whatsapp || "—";
-
-  const status =
-    document.getElementById(
-      "memberStatus"
-    );
-
-  if (user.premium) {
-
-    status.textContent =
-      "PREMIUM";
-
-    status.style.color =
-      "#f5c542";
-
-    document.getElementById(
-      "memberExpiration"
-    ).textContent =
-      formatDate(
-        user.premiumExpiresAt
-      );
-
-  } else {
-
-    status.textContent =
-      "GRATUIT";
-
-    status.style.color =
-      "#ff4d67";
-
-    document.getElementById(
-      "memberExpiration"
-    ).textContent =
-      "Non actif";
-  }
-
-  renderMemberHistory(user);
-}
-
-
-/* =========================================================
-   HISTORIQUE MEMBRE
-========================================================= */
-
-function renderMemberHistory(user) {
-
-  const container =
-    document.getElementById(
-      "memberHistory"
-    );
-
-  const history =
-    user.subscriptionHistory || [];
-
-  if (!history.length) {
-
-    container.innerHTML =
-      `<p style="color:#9eafc3">
-        Aucun abonnement enregistré pour le moment.
-      </p>`;
-
-    return;
-  }
-
-  container.innerHTML =
-    history
-      .slice()
-      .reverse()
-      .map(item => {
-
-        return `
-          <div class="history-item">
-
-            <strong>
-              ${escapeHTML(item.action)}
-            </strong>
-
-            <p>
-              Durée :
-              ${escapeHTML(item.days)}
-              jours
-            </p>
-
-            <p>
-              Date :
-              ${formatDateTime(item.date)}
-            </p>
-
-            <p>
-              Nouvelle expiration :
-              ${formatDate(item.expiresAt)}
-            </p>
-
-          </div>
-        `;
-
-      })
-      .join("");
-}
-
-
-/* =========================================================
-   WHATSAPP
-========================================================= */
-
-function contactWhatsApp() {
-
-  const user = getCurrentUser();
-
-  let message =
-    "Bonjour WENDK PREDICT PRO.%0A%0A" +
-    "Je souhaite souscrire / renouveler mon abonnement Premium.";
-
-  if (user) {
-
-    message +=
-      "%0A%0ANom : " +
-      encodeURIComponent(user.name) +
-
-      "%0AEmail : " +
-      encodeURIComponent(user.email) +
-
-      "%0AWhatsApp : " +
-      encodeURIComponent(user.whatsapp);
-  }
-
-  window.open(
-    WHATSAPP_URL + "?text=" + message,
-    "_blank"
-  );
-}
-
-
-/* =========================================================
-   DÉCONNEXION MEMBRE
-========================================================= */
-
-function logout() {
-
-  localStorage.removeItem(
-    CURRENT_USER_KEY
-  );
-
-  showSection("home");
-    }
-/* =========================================================
-   PRÉDICTIONS
-========================================================= */
-
-const predictions = [
-
-  {
-    match: "Real Madrid vs Barcelona",
-    league: "Liga",
-    free: "Plus de 1,5 buts",
-    premium: "Indication Premium : Victoire Real Madrid"
-  },
-
-  {
-    match: "Manchester City vs Arsenal",
-    league: "Premier League",
-    free: "Plus de 1,5 buts",
-    premium: "Indication Premium : Plus de 2,5 buts"
-  },
-
-  {
-    match: "PSG vs Marseille",
-    league: "Ligue 1",
-    free: "PSG ou nul",
-    premium: "Indication Premium : PSG gagne"
-  },
-
-  {
-    match: "Bayern Munich vs Dortmund",
-    league: "Bundesliga",
-    free: "Plus de 1,5 buts",
-    premium: "Indication Premium : Bayern gagne"
-  },
-
-  {
-    match: "Liverpool vs Chelsea",
-    league: "Premier League",
-    free: "Plus de 1,5 buts",
-    premium: "Indication Premium : Liverpool ou nul"
-  },
-
-  {
-    match: "Inter Milan vs AC Milan",
-    league: "Serie A",
-    free: "Plus de 1,5 buts",
-    premium: "Indication Premium : Inter Milan gagne"
-  }
-
-];
-
-
-/* =========================================================
-   AFFICHAGE DES PRÉDICTIONS
-========================================================= */
-
-function renderPredictions() {
-
-  const container =
-    document.getElementById("predictionList");
-
-  if (!container) return;
-
-  const currentUser =
-    getCurrentUser();
-
-  let isPremium = false;
-
-  if (currentUser) {
-
-    const user =
-      checkPremiumExpiration(currentUser);
-
-    isPremium =
-      user && user.premium === true;
-  }
-
-  container.innerHTML =
-    predictions.map(prediction => {
-
-      return `
-        <article class="prediction-card">
-
-          <span class="badge">
-            ${escapeHTML(prediction.league)}
-          </span>
-
-          <h3>
-            ${escapeHTML(prediction.match)}
-          </h3>
-
-          <div class="prediction-line">
-
-            <span>
-              Indication gratuite
-            </span>
-
-            <strong class="free-indication">
-              ${escapeHTML(prediction.free)}
-            </strong>
-
-          </div>
-
-          <div class="prediction-line">
-
-            <span>
-              Premium
-            </span>
-
-            <strong class="${
-              isPremium
-                ? "free-indication"
-                : "premium-indication"
-            }">
-
-              ${escapeHTML(prediction.premium)}
-
-            </strong>
-
-          </div>
-
-          ${
-            !isPremium
-              ? `
-                <div class="lock-message">
-
-                  🔒 Indication réservée
-                  aux membres Premium.
-
-                  <br><br>
-
-                  <button
-                    class="btn primary"
-                    onclick="showSection('login')">
-
-                    🔐 Se connecter
-
-                  </button>
-
-                </div>
-              `
-              : ""
-          }
-
-        </article>
-      `;
-
-    }).join("");
-}
-
-
-/* =========================================================
-   ADMIN — VÉRIFICATION DE SESSION
-========================================================= */
-
-function isAdminLogged() {
-
-  return (
-    localStorage.getItem(
-      ADMIN_SESSION_KEY
-    ) === "true"
-  );
-}
-
-
-/* =========================================================
-   CONNEXION ADMIN
-========================================================= */
-
-function adminLogin(event) {
-
-  event.preventDefault();
-
-  const username =
-    document.getElementById(
-      "adminUsername"
-    ).value.trim();
 
   const password =
-    document.getElementById(
-      "adminPassword"
-    ).value;
+    document
+      .getElementById(
+        "registerPassword"
+      )
+      .value;
+
 
   const message =
     document.getElementById(
-      "adminLoginMessage"
+      "registerMessage"
     );
+
 
   if (
-    username === ADMIN_USERNAME &&
-    password === ADMIN_PASSWORD
+    !name ||
+    !email ||
+    !password
   ) {
-
-    localStorage.setItem(
-      ADMIN_SESSION_KEY,
-      "true"
-    );
-
-    message.className =
-      "success-message";
-
-    message.textContent =
-      "Connexion administrateur réussie.";
-
-    setTimeout(() => {
-
-      showSection(
-        "adminDashboard"
-      );
-
-    }, 500);
-
-  } else {
 
     message.className =
       "error-message";
 
     message.textContent =
-      "Identifiant ou mot de passe incorrect.";
-  }
-}
-
-
-/* =========================================================
-   DÉCONNEXION ADMIN
-========================================================= */
-
-function adminLogout() {
-
-  localStorage.removeItem(
-    ADMIN_SESSION_KEY
-  );
-
-  showSection("home");
-}
-
-
-/* =========================================================
-   TABLEAU DE BORD ADMIN
-========================================================= */
-
-function renderAdminDashboard() {
-
-  if (!isAdminLogged()) {
-
-    showSection("adminLogin");
+      "Veuillez remplir tous les champs obligatoires.";
 
     return;
-  }
-
-  let users =
-    getUsers();
-
-  const payments =
-    getPayments();
-
-
-  /*
-    Vérification automatique
-    de l'expiration Premium.
-  */
-
-  users.forEach(user => {
-
-    checkPremiumExpiration(user);
-
-  });
-
-
-  users =
-    getUsers();
-
-
-  const premiumCount =
-    users.filter(
-      user => user.premium === true
-    ).length;
-
-
-  const expiredCount =
-    users.filter(
-      user =>
-        !user.premium &&
-        user.premiumExpiredAt
-    ).length;
-
-
-  const totalMembers =
-    document.getElementById(
-      "totalMembers"
-    );
-
-  const premiumMembers =
-    document.getElementById(
-      "premiumMembers"
-    );
-
-  const expiredMembers =
-    document.getElementById(
-      "expiredMembers"
-    );
-
-  const totalPayments =
-    document.getElementById(
-      "totalPayments"
-    );
-
-
-  if (totalMembers) {
-
-    totalMembers.textContent =
-      users.length;
 
   }
 
 
-  if (premiumMembers) {
+  if (
+    password.length < 6
+  ) {
 
-    premiumMembers.textContent =
-      premiumCount;
+    message.className =
+      "error-message";
 
-  }
-
-
-  if (expiredMembers) {
-
-    expiredMembers.textContent =
-      expiredCount;
-
-  }
-
-
-  if (totalPayments) {
-
-    totalPayments.textContent =
-      payments.length;
-
-  }
-
-
-  renderAdminMembers();
-
-  renderAdminPayments();
-}
-
-
-/* =========================================================
-   LISTE DES MEMBRES
-========================================================= */
-
-function renderAdminMembers() {
-
-  const container =
-    document.getElementById(
-      "adminMembers"
-    );
-
-  if (!container) return;
-
-
-  const searchInput =
-    document.getElementById(
-      "memberSearch"
-    );
-
-
-  const search =
-    searchInput
-      ? searchInput.value
-          .trim()
-          .toLowerCase()
-      : "";
-
-
-  const users =
-    getUsers().filter(user => {
-
-      const name =
-        String(user.name || "")
-          .toLowerCase();
-
-      const email =
-        String(user.email || "")
-          .toLowerCase();
-
-      const whatsapp =
-        String(user.whatsapp || "")
-          .toLowerCase();
-
-
-      return (
-        name.includes(search) ||
-        email.includes(search) ||
-        whatsapp.includes(search)
-      );
-
-    });
-
-
-  if (!users.length) {
-
-    container.innerHTML = `
-      <p style="color:#9eafc3">
-        Aucun membre trouvé.
-      </p>
-    `;
+    message.textContent =
+      "Le mot de passe doit contenir au moins 6 caractères.";
 
     return;
-  }
-
-
-  container.innerHTML =
-    users.map(user => {
-
-      const active =
-        user.premium === true &&
-        user.premiumExpiresAt &&
-        new Date(
-          user.premiumExpiresAt
-        ) > new Date();
-
-
-      return `
-
-        <div class="member-item">
-
-          <div class="member-info">
-
-            <h4>
-              ${escapeHTML(user.name)}
-            </h4>
-
-            <p>
-              📧
-              ${escapeHTML(user.email)}
-            </p>
-
-            <p>
-              📱
-              ${escapeHTML(user.whatsapp)}
-            </p>
-
-            <p>
-
-              Statut :
-
-              <strong
-                style="color:${
-                  active
-                    ? "#f5c542"
-                    : "#ff4d67"
-                }">
-
-                ${
-                  active
-                    ? "PREMIUM"
-                    : "GRATUIT"
-                }
-
-              </strong>
-
-            </p>
-
-            <p>
-
-              Expiration :
-
-              ${formatDate(
-                user.premiumExpiresAt
-              )}
-
-            </p>
-
-          </div>
-
-
-          <div class="member-actions">
-
-            <button
-              class="small-btn open-btn"
-              onclick="openAdminModal('${user.id}')">
-
-              💎 Gérer Premium
-
-            </button>
-
-          </div>
-
-        </div>
-
-      `;
-
-    }).join("");
-}
-
-
-/* =========================================================
-   OUVRIR LA FENÊTRE ADMIN
-========================================================= */
-
-function openAdminModal(userId) {
-
-  if (!isAdminLogged()) {
-
-    showSection("adminLogin");
-
-    return;
-  }
-
-
-  const users =
-    getUsers();
-
-
-  const user =
-    users.find(
-      u => u.id === userId
-    );
-
-
-  if (!user) {
-
-    alert(
-      "Membre introuvable."
-    );
-
-    return;
-  }
-
-
-  const memberIdInput =
-    document.getElementById(
-      "paymentMemberId"
-    );
-
-
-  if (memberIdInput) {
-
-    memberIdInput.value =
-      user.id;
 
   }
 
 
-  const info =
-    document.getElementById(
-      "selectedMemberInfo"
-    );
+  message.className =
+    "success-message";
+
+  message.textContent =
+    "Création du compte en cours...";
 
 
-  if (info) {
+  try {
 
-    info.innerHTML = `
+    const {
+      data,
+      error
+    } =
+      await supabaseClient.auth
+        .signUp({
 
-      <div class="dashboard-card">
+          email:
+            email,
 
-        <h3>
-          ${escapeHTML(user.name)}
-        </h3>
+          password:
+            password,
 
-        <p>
-          📧
-          ${escapeHTML(user.email)}
-        </p>
+          options: {
 
-        <p>
-          📱
-          ${escapeHTML(user.whatsapp)}
-        </p>
+            data: {
 
-        <p>
-          Statut :
+              name:
+                name,
 
-          <strong
-            style="color:${
-              user.premium
-                ? "#f5c542"
-                : "#ff4d67"
-            }">
+              whatsapp:
+                whatsapp
 
-            ${
-              user.premium
-                ? "PREMIUM"
-                : "GRATUIT"
             }
-
-          </strong>
-        </p>
-
-        <p>
-          Expiration :
-          ${formatDate(
-            user.premiumExpiresAt
-          )}
-        </p>
-
-      </div>
-
-    `;
-
-  }
-
-
-  const actionMessage =
-    document.getElementById(
-      "adminActionMessage"
-    );
-
-
-  if (actionMessage) {
-
-    actionMessage.innerHTML = "";
-
-  }
-
-
-  const modal =
-    document.getElementById(
-      "adminModal"
-    );
-
-
-  if (modal) {
-
-    modal.classList.add("show");
-
-  }
-}
-
-
-/* =========================================================
-   FERMER LA FENÊTRE ADMIN
-========================================================= */
-
-function closeAdminModal() {
-
-  const modal =
-    document.getElementById(
-      "adminModal"
-    );
-
-  if (modal) {
-
-    modal.classList.remove(
-      "show"
-    );
-
-  }
-}
-
-
-/* =========================================================
-   DURÉE PERSONNALISÉE
-========================================================= */
-
-document.addEventListener(
-  "DOMContentLoaded",
-  () => {
-
-    const duration =
-      document.getElementById(
-        "premiumDuration"
-      );
-
-
-    if (duration) {
-
-      duration.addEventListener(
-        "change",
-        () => {
-
-          const custom =
-            document.getElementById(
-              "customDays"
-            );
-
-
-          if (!custom) return;
-
-
-          if (
-            duration.value === "custom"
-          ) {
-
-            custom.style.display =
-              "block";
-
-          } else {
-
-            custom.style.display =
-              "none";
 
           }
 
-        }
+        });
+
+
+    if (error) {
+
+      console.error(
+        "Erreur inscription:",
+        error
       );
+
+      message.className =
+        "error-message";
+
+      message.textContent =
+        error.message ||
+        "Impossible de créer le compte.";
+
+      return;
 
     }
 
 
-    renderPredictions();
+    if (!data?.user) {
+
+      message.className =
+        "error-message";
+
+      message.textContent =
+        "Le compte n'a pas pu être créé.";
+
+      return;
+
+    }
+
+
+    /*
+      Si Supabase retourne une session,
+      l'utilisateur est immédiatement connecté.
+    */
+
+    if (data.session) {
+
+      message.className =
+        "success-message";
+
+      message.textContent =
+        "✅ Compte créé avec succès.";
+
+
+      setTimeout(
+        () => {
+
+          showSection(
+            "memberDashboard"
+          );
+
+        },
+        700
+      );
+
+    } else {
+
+      /*
+        Si la confirmation email
+        est activée dans Supabase.
+      */
+
+      message.className =
+        "success-message";
+
+      message.textContent =
+        "✅ Compte créé. Vérifiez votre adresse email pour confirmer votre compte.";
+
+    }
+
+
+  } catch (error) {
+
+    console.error(
+      "Erreur inscription:",
+      error
+    );
+
+    message.className =
+      "error-message";
+
+    message.textContent =
+      "Une erreur est survenue lors de la création du compte.";
 
   }
-);
+
+}
+
+
 /* =========================================================
-   ENREGISTRER UN PAIEMENT MOBILE MONEY
+   9. CONNEXION MEMBRE
 ========================================================= */
 
-function savePayment(event) {
+async function login(event) {
 
   event.preventDefault();
 
-  if (!isAdminLogged()) return;
 
-  const memberId =
-    document.getElementById("paymentMemberId").value;
-
-  const amount =
-    Number(document.getElementById("paymentAmount").value);
-
-  const method =
-    document.getElementById("paymentMethod").value;
-
-  const reference =
-    document.getElementById("paymentReference").value.trim();
-
-  const note =
-    document.getElementById("paymentNote").value.trim();
-
-  if (!amount || amount <= 0) {
-    showAdminMessage(
-      "Veuillez saisir un montant valide.",
-      "error-message"
-    );
-    return;
-  }
-
-  const users = getUsers();
-
-  const user = users.find(u => u.id === memberId);
-
-  if (!user) {
-    showAdminMessage(
-      "Membre introuvable.",
-      "error-message"
-    );
-    return;
-  }
-
-  const payments = getPayments();
-
-  const payment = {
-
-    id: generateId("payment"),
-
-    memberId: memberId,
-
-    memberName: user.name,
-
-    memberEmail: user.email,
-
-    memberWhatsapp: user.whatsapp,
-
-    amount: amount,
-
-    method: method,
-
-    reference: reference,
-
-    note: note,
-
-    date: new Date().toISOString(),
-
-    verified: true
-
-  };
-
-  payments.push(payment);
-
-  savePayments(payments);
-
-  document.getElementById("paymentAmount").value = "";
-
-  document.getElementById("paymentReference").value = "";
-
-  document.getElementById("paymentNote").value = "";
-
-  showAdminMessage(
-    "✅ Paiement enregistré avec succès.",
-    "success-message"
-  );
-
-  renderAdminDashboard();
-}
+  const email =
+    document
+      .getElementById(
+        "loginEmail"
+      )
+      .value
+      .trim()
+      .toLowerCase();
 
 
-/* =========================================================
-   ACTIVER / PROLONGER PREMIUM
-========================================================= */
+  const password =
+    document
+      .getElementById(
+        "loginPassword"
+      )
+      .value;
 
-function activatePremium() {
 
-  if (!isAdminLogged()) return;
-
-  const memberId =
-    document.getElementById("paymentMemberId").value;
-
-  const users = getUsers();
-
-  const index =
-    users.findIndex(u => u.id === memberId);
-
-  if (index === -1) {
-
-    showAdminMessage(
-      "Membre introuvable.",
-      "error-message"
+  const message =
+    document.getElementById(
+      "loginMessage"
     );
 
+
+  if (
+    !email ||
+    !password
+  ) {
+
+    message.className =
+      "error-message";
+
+    message.textContent =
+      "Veuillez saisir votre email et votre mot de passe.";
+
     return;
+
   }
 
-  const user = users[index];
 
-  const duration =
-    document.getElementById("premiumDuration").value;
+  message.className =
+    "success-message";
 
-  let days;
+  message.textContent =
+    "Connexion en cours...";
 
-  if (duration === "custom") {
 
-    days =
-      Number(
-        document.getElementById("customDays").value
+  try {
+
+    const {
+      data,
+      error
+    } =
+      await supabaseClient.auth
+        .signInWithPassword({
+
+          email:
+            email,
+
+          password:
+            password
+
+        });
+
+
+    if (error) {
+
+      console.error(
+        "Erreur connexion:",
+        error
       );
 
-    if (!days || days < 1) {
+      message.className =
+        "error-message";
 
-      showAdminMessage(
-        "Veuillez saisir une durée valide.",
-        "error-message"
-      );
+      message.textContent =
+        "Email ou mot de passe incorrect.";
 
       return;
+
     }
 
-  } else {
 
-    days = Number(duration);
+    if (!data?.user) {
 
-  }
+      message.className =
+        "error-message";
 
-  const now = new Date();
+      message.textContent =
+        "Utilisateur introuvable.";
 
-  /*
-    On vérifie AVANT modification si le Premium
-    était encore actif.
-  */
+      return;
 
-  const wasActive =
-    user.premium &&
-    user.premiumExpiresAt &&
-    new Date(user.premiumExpiresAt) > now;
-
-  let startDate = now;
-
-  /*
-    Si le membre possède encore du Premium,
-    on ajoute les nouveaux jours à son ancienne
-    date d'expiration.
-  */
-
-  if (wasActive) {
-
-    startDate =
-      new Date(user.premiumExpiresAt);
-
-  }
-
-  const expiration =
-    new Date(startDate);
-
-  expiration.setDate(
-    expiration.getDate() + days
-  );
-
-  user.premium = true;
-
-  user.premiumExpiresAt =
-    expiration.toISOString();
-
-  if (!user.subscriptionHistory) {
-
-    user.subscriptionHistory = [];
-
-  }
-
-  user.subscriptionHistory.push({
-
-    id: generateId("subscription"),
-
-    action:
-      wasActive
-        ? "Premium prolongé"
-        : "Premium activé",
-
-    days: days,
-
-    date: now.toISOString(),
-
-    expiresAt:
-      user.premiumExpiresAt
-
-  });
-
-  users[index] = user;
-
-  saveUsers(users);
-
-  showAdminMessage(
-
-    "✅ Premium " +
-    (wasActive ? "prolongé" : "activé") +
-    " jusqu'au " +
-    formatDate(user.premiumExpiresAt),
-
-    "success-message"
-
-  );
-
-  renderAdminDashboard();
-
-  setTimeout(() => {
-
-    openAdminModal(user.id);
-
-  }, 100);
-}
+    }
 
 
-/* =========================================================
-   DÉSACTIVER PREMIUM
-========================================================= */
+    message.className =
+      "success-message";
 
-function disablePremium() {
+    message.textContent =
+      "✅ Connexion réussie.";
 
-  if (!isAdminLogged()) return;
 
-  const memberId =
-    document.getElementById("paymentMemberId").value;
+    setTimeout(
+      () => {
 
-  const users = getUsers();
+        showSection(
+          "memberDashboard"
+        );
 
-  const index =
-    users.findIndex(u => u.id === memberId);
-
-  if (index === -1) {
-
-    showAdminMessage(
-      "Membre introuvable.",
-      "error-message"
+      },
+      500
     );
 
-    return;
-  }
 
-  const now =
-    new Date().toISOString();
+  } catch (error) {
 
-  users[index].premium = false;
-
-  users[index].premiumExpiresAt = null;
-
-  users[index].premiumDisabledAt = now;
-
-  if (!users[index].subscriptionHistory) {
-
-    users[index].subscriptionHistory = [];
-
-  }
-
-  users[index].subscriptionHistory.push({
-
-    id: generateId("subscription"),
-
-    action: "Premium désactivé",
-
-    days: 0,
-
-    date: now,
-
-    expiresAt: null
-
-  });
-
-  saveUsers(users);
-
-  showAdminMessage(
-    "✅ Premium désactivé.",
-    "success-message"
-  );
-
-  renderAdminDashboard();
-
-  setTimeout(() => {
-
-    openAdminModal(memberId);
-
-  }, 100);
-}
-
-
-/* =========================================================
-   MESSAGE ADMIN
-========================================================= */
-
-function showAdminMessage(text, className) {
-
-  const element =
-    document.getElementById(
-      "adminActionMessage"
+    console.error(
+      "Erreur connexion:",
+      error
     );
 
-  if (!element) return;
+    message.className =
+      "error-message";
 
-  element.className = className;
+    message.textContent =
+      "Une erreur est survenue lors de la connexion.";
 
-  element.textContent = text;
+  }
 
 }
 
 
 /* =========================================================
-   AFFICHAGE DES PAIEMENTS
+   10. DÉCONNEXION
 ========================================================= */
 
-function renderAdminPayments() {
+async function logout() {
 
-  const container =
-    document.getElementById("adminPayments");
+  try {
 
-  if (!container) return;
+    const {
+      error
+    } =
+      await supabaseClient.auth
+        .signOut();
 
-  const payments =
-    getPayments()
-      .slice()
-      .reverse();
 
-  if (!payments.length) {
+    if (error) {
 
-    container.innerHTML = `
-      <p style="color:#9eafc3">
-        Aucun paiement enregistré.
-      </p>
-    `;
+      console.error(
+        "Erreur déconnexion:",
+        error
+      );
 
-    return;
+    }
+
+
+  } catch (error) {
+
+    console.error(
+      "Erreur logout:",
+      error
+    );
+
   }
 
-  container.innerHTML =
 
-    payments.map(payment => {
-
-      return `
-
-        <div class="payment-item">
-
-          <strong>
-            ${escapeHTML(payment.memberName)}
-          </strong>
-
-          <p>
-            📱 ${escapeHTML(payment.memberWhatsapp)}
-          </p>
-
-          <p>
-            💰
-            ${Number(payment.amount)
-              .toLocaleString("fr-FR")}
-            FCFA
-          </p>
-
-          <p>
-            💳 ${escapeHTML(payment.method)}
-          </p>
-
-          <p>
-            Référence :
-            ${escapeHTML(
-              payment.reference || "Non fournie"
-            )}
-          </p>
-
-          <p>
-            Date :
-            ${formatDateTime(payment.date)}
-          </p>
-
-          ${
-            payment.note
-              ? `
-                <p>
-                  📝 ${escapeHTML(payment.note)}
-                </p>
-              `
-              : ""
-          }
-
-          <p style="color:#00d084">
-            ✅ Paiement vérifié manuellement
-          </p>
-
-        </div>
-
-      `;
-
-    }).join("");
+  showSection(
+    "home"
+  );
 
 }
 
 
 /* =========================================================
-   INITIALISATION FINALE
+   11. ÉCOUTER LES CHANGEMENTS DE SESSION
 ========================================================= */
 
-(function init() {
+function listenAuthChanges() {
 
-  const user =
-    getCurrentUser();
+  supabaseClient.auth
+    .onAuthStateChange(
+      (
+        event,
+        session
+      ) => {
 
-  if (user) {
+        console.log(
+          "Supabase Auth:",
+          event
+        );
 
-    checkPremiumExpiration(user);
+
+        if (
+          event ===
+          "SIGNED_OUT"
+        ) {
+
+          showSection(
+            "home"
+          );
+
+          return;
+
+        }
+
+
+        if (
+          event ===
+          "SIGNED_IN" ||
+          event ===
+          "TOKEN_REFRESHED"
+        ) {
+
+          renderPredictions();
+
+        }
+
+      }
+    );
+
+}
+
+
+/* =========================================================
+   12. INITIALISATION DU BLOC 1
+========================================================= */
+
+async function initAuth() {
+
+  try {
+
+    const user =
+      await getCurrentUser();
+
+
+    if (user) {
+
+      console.log(
+        "Membre connecté :",
+        user.email
+      );
+
+    } else {
+
+      console.log(
+        "Aucun membre connecté."
+      );
+
+    }
+
+
+    listenAuthChanges();
+
+
+  } catch (error) {
+
+    console.error(
+      "Erreur initialisation Auth:",
+      error
+    );
 
   }
 
-})();
+}
