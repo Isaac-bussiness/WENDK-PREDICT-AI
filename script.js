@@ -1571,3 +1571,1335 @@ async function initPremiumSystem() {
   }
 
    }
+/* =========================================================
+   WENDK PREDICT PRO V3
+   SCRIPT.JS — BLOC 3/3
+   ADMINISTRATION + PAIEMENTS + PREMIUM
+========================================================= */
+
+
+/* =========================================================
+   26. VÉRIFIER SI L'UTILISATEUR EST ADMIN
+========================================================= */
+
+async function isAdmin() {
+
+  const user = await getCurrentUser();
+
+  if (!user || !user.id) {
+    return false;
+  }
+
+  try {
+
+    const { data, error } = await supabaseClient
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Erreur vérification admin:", error);
+      return false;
+    }
+
+    return data?.role === "admin";
+
+  } catch (error) {
+
+    console.error("Erreur admin:", error);
+
+    return false;
+  }
+}
+
+
+/* =========================================================
+   27. CONNEXION ADMIN
+========================================================= */
+
+async function adminLogin(event) {
+
+  event.preventDefault();
+
+  const username =
+    document.getElementById("adminUsername")?.value.trim();
+
+  const password =
+    document.getElementById("adminPassword")?.value;
+
+  const message =
+    document.getElementById("adminLoginMessage");
+
+
+  if (!username || !password) {
+
+    showMessage(
+      "adminLoginMessage",
+      "Veuillez remplir tous les champs.",
+      "error-message"
+    );
+
+    return;
+  }
+
+
+  if (message) {
+
+    message.className = "success-message";
+    message.textContent = "Connexion administrateur...";
+
+  }
+
+
+  try {
+
+    /*
+     * Le champ adminUsername accepte l'adresse
+     * email du compte administrateur Supabase.
+     */
+
+    const { data, error } =
+      await supabaseClient.auth.signInWithPassword({
+
+        email: username.toLowerCase(),
+
+        password: password
+
+      });
+
+
+    if (error) {
+
+      console.error(
+        "Erreur connexion admin:",
+        error
+      );
+
+      showMessage(
+        "adminLoginMessage",
+        "Identifiants administrateur incorrects.",
+        "error-message"
+      );
+
+      return;
+    }
+
+
+    if (!data?.user) {
+
+      showMessage(
+        "adminLoginMessage",
+        "Compte administrateur introuvable.",
+        "error-message"
+      );
+
+      return;
+    }
+
+
+    const admin =
+      await getCurrentUser();
+
+
+    if (!admin || admin.role !== "admin") {
+
+      await supabaseClient.auth.signOut();
+
+      showMessage(
+        "adminLoginMessage",
+        "⛔ Ce compte n'a pas les droits administrateur.",
+        "error-message"
+      );
+
+      return;
+    }
+
+
+    showMessage(
+      "adminLoginMessage",
+      "✅ Connexion administrateur réussie.",
+      "success-message"
+    );
+
+
+    setTimeout(() => {
+
+      showSection("adminDashboard");
+
+    }, 500);
+
+
+  } catch (error) {
+
+    console.error(
+      "Erreur admin login:",
+      error
+    );
+
+    showMessage(
+      "adminLoginMessage",
+      "Une erreur est survenue.",
+      "error-message"
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   28. DÉCONNEXION ADMIN
+========================================================= */
+
+async function adminLogout() {
+
+  try {
+
+    await supabaseClient.auth.signOut();
+
+  } catch (error) {
+
+    console.error(
+      "Erreur déconnexion admin:",
+      error
+    );
+
+  }
+
+  showSection("home");
+}
+
+
+/* =========================================================
+   29. CHARGER LES MEMBRES
+========================================================= */
+
+async function getAllMembers() {
+
+  try {
+
+    const { data, error } =
+      await supabaseClient
+        .from("profiles")
+        .select("*")
+        .order("created_at", {
+          ascending: false
+        });
+
+
+    if (error) {
+
+      console.error(
+        "Erreur membres:",
+        error
+      );
+
+      return [];
+
+    }
+
+
+    return data || [];
+
+
+  } catch (error) {
+
+    console.error(
+      "Erreur récupération membres:",
+      error
+    );
+
+    return [];
+
+  }
+
+}
+
+
+/* =========================================================
+   30. CHARGER LES PAIEMENTS
+========================================================= */
+
+async function getAllPayments() {
+
+  try {
+
+    const { data, error } =
+      await supabaseClient
+        .from("payments")
+        .select(`
+          *,
+          profiles!payments_user_id_fkey(
+            id,
+            name,
+            whatsapp
+          )
+        `)
+        .order("created_at", {
+          ascending: false
+        });
+
+
+    if (error) {
+
+      console.error(
+        "Erreur paiements admin:",
+        error
+      );
+
+      return [];
+
+    }
+
+
+    return data || [];
+
+
+  } catch (error) {
+
+    console.error(
+      "Erreur récupération paiements:",
+      error
+    );
+
+    return [];
+
+  }
+
+}
+
+
+/* =========================================================
+   31. CALCULER LE NOMBRE DE MEMBRES PREMIUM
+========================================================= */
+
+async function countPremiumMembers(members) {
+
+  let premiumCount = 0;
+
+  for (const member of members) {
+
+    if (member.role === "admin") {
+      continue;
+    }
+
+    const subscription =
+      await getActiveSubscription(member.id);
+
+    if (subscription) {
+      premiumCount++;
+    }
+
+  }
+
+  return premiumCount;
+}
+
+
+/* =========================================================
+   32. AFFICHER LE TABLEAU DE BORD ADMIN
+========================================================= */
+
+async function renderAdminDashboard() {
+
+  const admin =
+    await getCurrentUser();
+
+
+  if (!admin || admin.role !== "admin") {
+
+    showSection("adminLogin");
+
+    return;
+
+  }
+
+
+  const members =
+    await getAllMembers();
+
+  const payments =
+    await getAllPayments();
+
+
+  const premiumCount =
+    await countPremiumMembers(members);
+
+
+  const memberCount =
+    members.filter(
+      member => member.role !== "admin"
+    ).length;
+
+
+  const verifiedPayments =
+    payments.filter(
+      payment => payment.verified === true
+    ).length;
+
+
+  const premiumElement =
+    document.getElementById("premiumMembers");
+
+  const totalMembersElement =
+    document.getElementById("totalMembers");
+
+  const expiredElement =
+    document.getElementById("expiredMembers");
+
+  const totalPaymentsElement =
+    document.getElementById("totalPayments");
+
+
+  if (totalMembersElement) {
+
+    totalMembersElement.textContent =
+      memberCount;
+
+  }
+
+
+  if (premiumElement) {
+
+    premiumElement.textContent =
+      premiumCount;
+
+  }
+
+
+  if (totalPaymentsElement) {
+
+    totalPaymentsElement.textContent =
+      verifiedPayments;
+
+  }
+
+
+  if (expiredElement) {
+
+    expiredElement.textContent =
+      Math.max(
+        0,
+        memberCount - premiumCount
+      );
+
+  }
+
+
+  await renderAdminMembers(members);
+
+  await renderAdminPayments(payments);
+
+}
+
+
+/* =========================================================
+   33. AFFICHER LES MEMBRES DANS L'ADMIN
+========================================================= */
+
+async function renderAdminMembers(members = null) {
+
+  const container =
+    document.getElementById("adminMembers");
+
+  if (!container) return;
+
+
+  if (!members) {
+
+    members =
+      await getAllMembers();
+
+  }
+
+
+  const searchInput =
+    document.getElementById("memberSearch");
+
+  const search =
+    searchInput?.value.trim().toLowerCase() || "";
+
+
+  let filtered =
+    members.filter(member => {
+
+      if (member.role === "admin") {
+        return false;
+      }
+
+
+      if (!search) {
+        return true;
+      }
+
+
+      return (
+
+        String(member.name || "")
+          .toLowerCase()
+          .includes(search)
+
+        ||
+
+        String(member.whatsapp || "")
+          .toLowerCase()
+          .includes(search)
+
+        ||
+
+        String(member.id || "")
+          .toLowerCase()
+          .includes(search)
+
+      );
+
+    });
+
+
+  if (filtered.length === 0) {
+
+    container.innerHTML =
+      "<p>Aucun membre trouvé.</p>";
+
+    return;
+
+  }
+
+
+  let html = `
+
+    <div class="admin-list">
+
+      <h3>👥 Membres</h3>
+
+  `;
+
+
+  for (const member of filtered) {
+
+    const premium =
+      await getActiveSubscription(member.id);
+
+
+    const premiumStatus =
+      premium
+
+        ? `
+          <span class="premium-status">
+            ⭐ PREMIUM
+          </span>
+        `
+
+        : `
+          <span class="free-status">
+            GRATUIT
+          </span>
+        `;
+
+
+    html += `
+
+      <div class="admin-member-item">
+
+        <div class="member-info">
+
+          <strong>
+            ${escapeHTML(
+              member.name || "Membre"
+            )}
+          </strong>
+
+          <p>
+            WhatsApp :
+            ${escapeHTML(
+              member.whatsapp || "Non renseigné"
+            )}
+          </p>
+
+          <p>
+            Inscription :
+            ${formatDate(
+              member.created_at
+            )}
+          </p>
+
+          ${premiumStatus}
+
+          ${
+            premium
+              ? `
+                <p>
+                  Expire le :
+                  <strong>
+                    ${formatDate(
+                      premium.expires_at
+                    )}
+                  </strong>
+                </p>
+              `
+              : ""
+          }
+
+        </div>
+
+
+        <div class="member-actions">
+
+          <button
+            type="button"
+            onclick="openAdminMemberModal('${member.id}')">
+            ⚙️ Gérer
+          </button>
+
+        </div>
+
+      </div>
+
+    `;
+
+  }
+
+
+  html += `
+
+    </div>
+
+  `;
+
+
+  container.innerHTML = html;
+
+}
+
+
+/* =========================================================
+   34. RECHERCHE DES MEMBRES
+========================================================= */
+
+function searchMembers() {
+
+  renderAdminMembers();
+
+}
+
+
+/* =========================================================
+   35. AFFICHER LES PAIEMENTS ADMIN
+========================================================= */
+
+async function renderAdminPayments(payments = null) {
+
+  const container =
+    document.getElementById("adminPayments");
+
+  if (!container) return;
+
+
+  if (!payments) {
+
+    payments =
+      await getAllPayments();
+
+  }
+
+
+  if (!payments || payments.length === 0) {
+
+    container.innerHTML =
+      "<p>Aucun paiement enregistré.</p>";
+
+    return;
+
+  }
+
+
+  let html = `
+
+    <div class="admin-list">
+
+      <h3>💰 Paiements</h3>
+
+  `;
+
+
+  payments.forEach(payment => {
+
+    const member =
+      payment.profiles || {};
+
+
+    const status =
+      payment.verified
+
+        ? `
+          <span class="premium-status">
+            ✅ VÉRIFIÉ
+          </span>
+        `
+
+        : `
+          <span class="free-status">
+            ⏳ EN ATTENTE
+          </span>
+        `;
+
+
+    html += `
+
+      <div class="admin-payment-item">
+
+        <div>
+
+          <strong>
+            ${escapeHTML(
+              member.name || "Membre"
+            )}
+          </strong>
+
+          <p>
+            WhatsApp :
+            ${escapeHTML(
+              member.whatsapp || "Non renseigné"
+            )}
+          </p>
+
+          <p>
+            Montant :
+            <strong>
+              ${Number(
+                payment.amount || 0
+              ).toLocaleString("fr-FR")}
+              FCFA
+            </strong>
+          </p>
+
+          <p>
+            Méthode :
+            ${escapeHTML(
+              payment.method || "Mobile Money"
+            )}
+          </p>
+
+          <p>
+            Référence :
+            ${escapeHTML(
+              payment.reference || "Non fournie"
+            )}
+          </p>
+
+          <p>
+            Date :
+            ${formatDateTime(
+              payment.created_at
+            )}
+          </p>
+
+          ${status}
+
+        </div>
+
+
+        <div class="payment-actions">
+
+          ${
+            payment.verified
+
+              ? `
+
+                <button
+                  type="button"
+                  onclick="openAdminMemberModal('${payment.user_id}')">
+                  ⚙️ Gérer Premium
+                </button>
+
+              `
+
+              : `
+
+                <button
+                  type="button"
+                  onclick="verifyPayment('${payment.id}')">
+                  ✅ Vérifier
+                </button>
+
+                <button
+                  type="button"
+                  onclick="openAdminMemberModal('${payment.user_id}')">
+                  ⭐ Activer Premium
+                </button>
+
+              `
+          }
+
+        </div>
+
+      </div>
+
+    `;
+
+  });
+
+
+  html += `
+
+    </div>
+
+  `;
+
+
+  container.innerHTML = html;
+
+}
+
+
+/* =========================================================
+   36. OUVRIR LA FENÊTRE ADMIN D'UN MEMBRE
+========================================================= */
+
+async function openAdminMemberModal(userId) {
+
+  const admin =
+    await getCurrentUser();
+
+
+  if (!admin || admin.role !== "admin") {
+
+    alert(
+      "Accès administrateur requis."
+    );
+
+    return;
+
+  }
+
+
+  const member =
+    await getProfile(userId);
+
+
+  if (!member) {
+
+    alert(
+      "Membre introuvable."
+    );
+
+    return;
+
+  }
+
+
+  const modal =
+    document.getElementById("adminModal");
+
+
+  if (!modal) {
+
+    console.error(
+      "adminModal introuvable dans le HTML."
+    );
+
+    return;
+
+  }
+
+
+  const info =
+    document.getElementById("selectedMemberInfo");
+
+
+  if (info) {
+
+    info.innerHTML = `
+
+      <strong>
+        ${escapeHTML(
+          member.name || "Membre"
+        )}
+      </strong>
+
+      <p>
+        WhatsApp :
+        ${escapeHTML(
+          member.whatsapp || "Non renseigné"
+        )}
+      </p>
+
+      <p>
+        ID :
+        ${escapeHTML(member.id)}
+      </p>
+
+    `;
+
+  }
+
+
+  const memberIdField =
+    document.getElementById("paymentMemberId");
+
+
+  if (memberIdField) {
+
+    memberIdField.value =
+      member.id;
+
+  }
+
+
+  const subscription =
+    await getActiveSubscription(member.id);
+
+
+  const durationField =
+    document.getElementById("premiumDuration");
+
+  const customDaysField =
+    document.getElementById("customDays");
+
+
+  if (durationField) {
+
+    durationField.value =
+      subscription ? "30" : "30";
+
+  }
+
+
+  if (customDaysField) {
+
+    customDaysField.value = "";
+
+  }
+
+
+  const actionMessage =
+    document.getElementById("adminActionMessage");
+
+
+  if (actionMessage) {
+
+    actionMessage.textContent = "";
+
+  }
+
+
+  modal.classList.add("active");
+
+  modal.style.display = "flex";
+
+}
+
+
+/* =========================================================
+   37. FERMER LA FENÊTRE ADMIN
+========================================================= */
+
+function closeAdminModal() {
+
+  const modal =
+    document.getElementById("adminModal");
+
+  if (!modal) return;
+
+
+  modal.classList.remove("active");
+
+  modal.style.display = "none";
+
+}
+
+
+/* =========================================================
+   38. OBTENIR LE NOMBRE DE JOURS PREMIUM
+========================================================= */
+
+function getPremiumDays() {
+
+  const duration =
+    document.getElementById("premiumDuration");
+
+  const custom =
+    document.getElementById("customDays");
+
+
+  const selected =
+    duration?.value || "";
+
+
+  if (selected === "custom") {
+
+    const days =
+      parseInt(
+        custom?.value || 0
+      );
+
+    return days;
+
+  }
+
+
+  const days =
+    parseInt(selected);
+
+
+  return Number.isFinite(days)
+    ? days
+    : 0;
+
+}
+
+
+/* =========================================================
+   39. ACTIVER / PROLONGER PREMIUM
+========================================================= */
+
+async function activatePremium() {
+
+  const admin =
+    await getCurrentUser();
+
+
+  if (!admin || admin.role !== "admin") {
+
+    showMessage(
+      "adminActionMessage",
+      "⛔ Accès administrateur requis.",
+      "error-message"
+    );
+
+    return;
+
+  }
+
+
+  const userId =
+    document.getElementById(
+      "paymentMemberId"
+    )?.value;
+
+
+  if (!userId) {
+
+    showMessage(
+      "adminActionMessage",
+      "Membre introuvable.",
+      "error-message"
+    );
+
+    return;
+
+  }
+
+
+  const days =
+    getPremiumDays();
+
+
+  if (!days || days <= 0) {
+
+    showMessage(
+      "adminActionMessage",
+      "Veuillez choisir une durée Premium valide.",
+      "error-message"
+    );
+
+    return;
+
+  }
+
+
+  try {
+
+    const now =
+      new Date();
+
+
+    const current =
+      await getActiveSubscription(userId);
+
+
+    let startDate =
+      now;
+
+
+    let expirationDate;
+
+
+    /*
+     * Si le membre possède encore un Premium actif,
+     * on ajoute les nouveaux jours à son expiration.
+     */
+
+    if (current) {
+
+      const currentExpiration =
+        new Date(
+          current.expires_at
+        );
+
+
+      startDate =
+        currentExpiration;
+
+
+      expirationDate =
+        new Date(
+          currentExpiration.getTime() +
+          days * 24 * 60 * 60 * 1000
+        );
+
+    } else {
+
+      expirationDate =
+        new Date(
+          now.getTime() +
+          days * 24 * 60 * 60 * 1000
+        );
+
+    }
+
+
+    const { data, error } =
+      await supabaseClient
+        .from("subscriptions")
+        .insert({
+
+          user_id: userId,
+
+          start_at:
+            startDate.toISOString(),
+
+          expires_at:
+            expirationDate.toISOString(),
+
+          days: days,
+
+          action:
+            current
+              ? "Prolongation Premium"
+              : "Activation Premium",
+
+          created_by:
+            admin.id
+
+        })
+        .select()
+        .single();
+
+
+    if (error) {
+
+      console.error(
+        "Erreur activation Premium:",
+        error
+      );
+
+      showMessage(
+        "adminActionMessage",
+        "❌ Impossible d'activer le Premium.",
+        "error-message"
+      );
+
+      return;
+
+    }
+
+
+    showMessage(
+      "adminActionMessage",
+      "✅ Premium activé jusqu'au " +
+      formatDate(
+        expirationDate
+      ) +
+      ".",
+      "success-message"
+    );
+
+
+    await renderAdminDashboard();
+
+    await renderPredictions();
+
+
+    setTimeout(() => {
+
+      closeAdminModal();
+
+    }, 1200);
+
+
+    return data;
+
+
+  } catch (error) {
+
+    console.error(
+      "Erreur Premium:",
+      error
+    );
+
+    showMessage(
+      "adminActionMessage",
+      "Une erreur est survenue.",
+      "error-message"
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   40. VÉRIFIER UN PAIEMENT
+========================================================= */
+
+async function verifyPayment(paymentId) {
+
+  const admin =
+    await getCurrentUser();
+
+
+  if (!admin || admin.role !== "admin") {
+
+    alert(
+      "Accès administrateur requis."
+    );
+
+    return;
+
+  }
+
+
+  if (!paymentId) {
+
+    return;
+
+  }
+
+
+  const confirmation =
+    confirm(
+      "Confirmer la vérification de ce paiement ?"
+    );
+
+
+  if (!confirmation) {
+
+    return;
+
+  }
+
+
+  try {
+
+    const { error } =
+      await supabaseClient
+        .from("payments")
+        .update({
+
+          verified: true,
+
+          verified_by: admin.id
+
+        })
+        .eq("id", paymentId);
+
+
+    if (error) {
+
+      console.error(
+        "Erreur vérification paiement:",
+        error
+      );
+
+      alert(
+        "Impossible de vérifier le paiement."
+      );
+
+      return;
+
+    }
+
+
+    alert(
+      "✅ Paiement vérifié avec succès."
+    );
+
+
+    await renderAdminDashboard();
+
+
+  } catch (error) {
+
+    console.error(
+      "Erreur paiement:",
+      error
+    );
+
+    alert(
+      "Une erreur est survenue."
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   41. DÉSACTIVER LE PREMIUM
+========================================================= */
+
+async function deactivatePremium(userId) {
+
+  const admin =
+    await getCurrentUser();
+
+
+  if (!admin || admin.role !== "admin") {
+
+    alert(
+      "Accès administrateur requis."
+    );
+
+    return;
+
+  }
+
+
+  if (!userId) {
+
+    userId =
+      document.getElementById(
+        "paymentMemberId"
+      )?.value;
+
+  }
+
+
+  if (!userId) {
+
+    return;
+
+  }
+
+
+  const confirmation =
+    confirm(
+      "Voulez-vous désactiver le Premium de ce membre ?"
+    );
+
+
+  if (!confirmation) {
+
+    return;
+
+  }
+
+
+  try {
+
+    /*
+     * On ne supprime pas l'historique.
+     * On expire simplement l'abonnement actif.
+     
