@@ -3326,3 +3326,867 @@ window.updateAdminStats =
 /* =========================================================
    FIN STATISTIQUES ADMIN
 ========================================================= */
+/* =========================================================
+   WENDK PREDICT PRO V3
+   AJOUTER UN MEMBRE ADMIN
+========================================================= */
+
+
+/* =========================================================
+   51. CRÉER LE BOUTON
+========================================================= */
+
+function createAddMemberButton() {
+
+  const dashboard =
+    $("adminDashboard");
+
+  if (!dashboard) {
+    return;
+  }
+
+
+  if ($("wendkAddMemberButton")) {
+    return;
+  }
+
+
+  const container =
+    document.createElement("div");
+
+
+  container.style.cssText = `
+    margin:20px 0;
+    display:flex;
+    justify-content:flex-end;
+  `;
+
+
+  container.innerHTML = `
+
+    <button
+      id="wendkAddMemberButton"
+      type="button"
+      style="
+        background:#111827;
+        color:white;
+        border:none;
+        padding:13px 20px;
+        border-radius:12px;
+        font-weight:700;
+        cursor:pointer;
+        font-size:15px;
+      "
+    >
+      ➕ Ajouter un membre
+    </button>
+
+  `;
+
+
+  dashboard.prepend(
+    container
+  );
+
+
+  $("wendkAddMemberButton")
+    .addEventListener(
+      "click",
+      openAddMemberModal
+    );
+}
+
+
+/* =========================================================
+   52. MODALE AJOUT MEMBRE
+========================================================= */
+
+function createAddMemberModal() {
+
+  if ($("wendkAddMemberModal")) {
+    return;
+  }
+
+
+  const modal =
+    document.createElement("div");
+
+
+  modal.id =
+    "wendkAddMemberModal";
+
+
+  modal.style.cssText = `
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.65);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    z-index:99999;
+  `;
+
+
+  modal.innerHTML = `
+
+    <div
+      style="
+        width:100%;
+        max-width:520px;
+        max-height:90vh;
+        overflow-y:auto;
+        background:white;
+        border-radius:18px;
+        padding:24px;
+        box-shadow:0 20px 60px rgba(0,0,0,.25);
+      "
+    >
+
+      <div
+        style="
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          margin-bottom:20px;
+        "
+      >
+
+        <h2 style="margin:0;">
+          ➕ Ajouter un membre
+        </h2>
+
+        <button
+          id="closeAddMemberModal"
+          type="button"
+          style="
+            border:none;
+            background:#f1f5f9;
+            width:38px;
+            height:38px;
+            border-radius:50%;
+            font-size:20px;
+            cursor:pointer;
+          "
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      <form
+        id="addMemberForm"
+      >
+
+
+        <label
+          style="
+            display:block;
+            margin-bottom:6px;
+            font-weight:700;
+          "
+        >
+          Nom complet
+        </label>
+
+        <input
+          id="newMemberName"
+          type="text"
+          placeholder="Ex : Jean Ouédraogo"
+          required
+          style="
+            width:100%;
+            box-sizing:border-box;
+            padding:13px;
+            margin-bottom:15px;
+            border:1px solid #d1d5db;
+            border-radius:10px;
+          "
+        >
+
+
+        <label
+          style="
+            display:block;
+            margin-bottom:6px;
+            font-weight:700;
+          "
+        >
+          WhatsApp
+        </label>
+
+        <input
+          id="newMemberWhatsapp"
+          type="tel"
+          placeholder="+226 70 00 00 00"
+          required
+          style="
+            width:100%;
+            box-sizing:border-box;
+            padding:13px;
+            margin-bottom:15px;
+            border:1px solid #d1d5db;
+            border-radius:10px;
+          "
+        >
+
+
+        <label
+          style="
+            display:block;
+            margin-bottom:6px;
+            font-weight:700;
+          "
+        >
+          Email
+        </label>
+
+        <input
+          id="newMemberEmail"
+          type="email"
+          placeholder="membre@email.com"
+          required
+          style="
+            width:100%;
+            box-sizing:border-box;
+            padding:13px;
+            margin-bottom:15px;
+            border:1px solid #d1d5db;
+            border-radius:10px;
+          "
+        >
+
+
+        <label
+          style="
+            display:block;
+            margin-bottom:6px;
+            font-weight:700;
+          "
+        >
+          Mot de passe
+        </label>
+
+        <input
+          id="newMemberPassword"
+          type="password"
+          placeholder="Minimum 6 caractères"
+          minlength="6"
+          required
+          style="
+            width:100%;
+            box-sizing:border-box;
+            padding:13px;
+            margin-bottom:15px;
+            border:1px solid #d1d5db;
+            border-radius:10px;
+          "
+        >
+
+
+        <label
+          style="
+            display:block;
+            margin-bottom:6px;
+            font-weight:700;
+          "
+        >
+          Statut
+        </label>
+
+        <select
+          id="newMemberStatus"
+          style="
+            width:100%;
+            box-sizing:border-box;
+            padding:13px;
+            margin-bottom:15px;
+            border:1px solid #d1d5db;
+            border-radius:10px;
+            background:white;
+          "
+        >
+
+          <option value="free">
+            🆓 Gratuit
+          </option>
+
+          <option value="premium">
+            💎 Premium
+          </option>
+
+        </select>
+
+
+        <div
+          id="premiumDaysContainer"
+          style="
+            display:none;
+            margin-bottom:15px;
+          "
+        >
+
+          <label
+            style="
+              display:block;
+              margin-bottom:6px;
+              font-weight:700;
+            "
+          >
+            Durée Premium
+          </label>
+
+          <select
+            id="newMemberPremiumDays"
+            style="
+              width:100%;
+              box-sizing:border-box;
+              padding:13px;
+              border:1px solid #d1d5db;
+              border-radius:10px;
+              background:white;
+            "
+          >
+
+            <option value="7">
+              7 jours
+            </option>
+
+            <option value="30" selected>
+              30 jours
+            </option>
+
+            <option value="90">
+              90 jours
+            </option>
+
+            <option value="180">
+              180 jours
+            </option>
+
+            <option value="365">
+              365 jours
+            </option>
+
+          </select>
+
+        </div>
+
+
+        <div
+          id="addMemberMessage"
+          style="
+            display:none;
+            padding:12px;
+            border-radius:10px;
+            margin-bottom:15px;
+            font-size:14px;
+          "
+        >
+        </div>
+
+
+        <button
+          id="submitAddMember"
+          type="submit"
+          style="
+            width:100%;
+            padding:14px;
+            border:none;
+            border-radius:12px;
+            background:#111827;
+            color:white;
+            font-weight:800;
+            font-size:16px;
+            cursor:pointer;
+          "
+        >
+          👤 Créer le membre
+        </button>
+
+
+      </form>
+
+    </div>
+
+  `;
+
+
+  document.body.appendChild(
+    modal
+  );
+
+
+  $("closeAddMemberModal")
+    .addEventListener(
+      "click",
+      closeAddMemberModal
+    );
+
+
+  $("newMemberStatus")
+    .addEventListener(
+      "change",
+      updatePremiumDaysVisibility
+    );
+
+
+  $("addMemberForm")
+    .addEventListener(
+      "submit",
+      createMemberFromAdmin
+    );
+
+
+  modal.addEventListener(
+    "click",
+    function(event) {
+
+      if (
+        event.target === modal
+      ) {
+
+        closeAddMemberModal();
+
+      }
+
+    }
+  );
+}
+
+
+/* =========================================================
+   53. OUVRIR LA MODALE
+========================================================= */
+
+function openAddMemberModal() {
+
+  createAddMemberModal();
+
+
+  const modal =
+    $("wendkAddMemberModal");
+
+
+  if (!modal) {
+    return;
+  }
+
+
+  modal.style.display =
+    "flex";
+
+
+  $("newMemberName").focus();
+}
+
+
+/* =========================================================
+   54. FERMER LA MODALE
+========================================================= */
+
+function closeAddMemberModal() {
+
+  const modal =
+    $("wendkAddMemberModal");
+
+
+  if (!modal) {
+    return;
+  }
+
+
+  modal.style.display =
+    "none";
+
+
+  const form =
+    $("addMemberForm");
+
+
+  if (form) {
+    form.reset();
+  }
+
+
+  updatePremiumDaysVisibility();
+
+
+  const message =
+    $("addMemberMessage");
+
+
+  if (message) {
+
+    message.style.display =
+      "none";
+
+    message.textContent =
+      "";
+
+  }
+
+}
+
+
+/* =========================================================
+   55. AFFICHER DURÉE PREMIUM
+========================================================= */
+
+function updatePremiumDaysVisibility() {
+
+  const status =
+    $("newMemberStatus");
+
+
+  const container =
+    $("premiumDaysContainer");
+
+
+  if (
+    !status ||
+    !container
+  ) {
+    return;
+  }
+
+
+  if (
+    status.value ===
+    "premium"
+  ) {
+
+    container.style.display =
+      "block";
+
+  } else {
+
+    container.style.display =
+      "none";
+
+  }
+
+}
+
+
+/* =========================================================
+   56. MESSAGE FORMULAIRE
+========================================================= */
+
+function showAddMemberMessage(
+  message,
+  type = "error"
+) {
+
+  const box =
+    $("addMemberMessage");
+
+
+  if (!box) {
+    return;
+  }
+
+
+  box.textContent =
+    message;
+
+
+  box.style.display =
+    "block";
+
+
+  if (type === "success") {
+
+    box.style.background =
+      "#dcfce7";
+
+    box.style.color =
+      "#166534";
+
+  } else {
+
+    box.style.background =
+      "#fee2e2";
+
+    box.style.color =
+      "#991b1b";
+
+  }
+
+}
+
+
+/* =========================================================
+   57. CRÉER LE MEMBRE
+========================================================= */
+
+async function createMemberFromAdmin(
+  event
+) {
+
+  event.preventDefault();
+
+
+  const auth =
+    await requireAdmin();
+
+
+  if (!auth) {
+    return;
+  }
+
+
+  const name =
+    $("newMemberName")
+      .value
+      .trim();
+
+
+  const whatsapp =
+    $("newMemberWhatsapp")
+      .value
+      .trim();
+
+
+  const email =
+    $("newMemberEmail")
+      .value
+      .trim()
+      .toLowerCase();
+
+
+  const password =
+    $("newMemberPassword")
+      .value;
+
+
+  const status =
+    $("newMemberStatus")
+      .value;
+
+
+  const premiumDays =
+    Number(
+      $("newMemberPremiumDays")
+        .value || 30
+    );
+
+
+  if (!name) {
+
+    showAddMemberMessage(
+      "Veuillez entrer le nom."
+    );
+
+    return;
+
+  }
+
+
+  if (!whatsapp) {
+
+    showAddMemberMessage(
+      "Veuillez entrer le numéro WhatsApp."
+    );
+
+    return;
+
+  }
+
+
+  if (!email) {
+
+    showAddMemberMessage(
+      "Veuillez entrer l'email."
+    );
+
+    return;
+
+  }
+
+
+  if (
+    password.length < 6
+  ) {
+
+    showAddMemberMessage(
+      "Le mot de passe doit contenir au moins 6 caractères."
+    );
+
+    return;
+
+  }
+
+
+  const button =
+    $("submitAddMember");
+
+
+  button.disabled =
+    true;
+
+
+  button.textContent =
+    "⏳ Création en cours...";
+
+
+  showAddMemberMessage(
+    "Création du compte...",
+    "success"
+  );
+
+
+  try {
+
+    const {
+      data,
+      error
+    } =
+      await supabase.functions.invoke(
+        "create-member",
+        {
+
+          body: {
+
+            name:
+              name,
+
+            whatsapp:
+              whatsapp,
+
+            email:
+              email,
+
+            password:
+              password,
+
+            status:
+              status,
+
+            premiumDays:
+              premiumDays
+
+          }
+
+        }
+      );
+
+
+    if (error) {
+
+      throw error;
+
+    }
+
+
+    if (
+      !data ||
+      data.success !== true
+    ) {
+
+      throw new Error(
+        data?.error ||
+        "Impossible de créer le membre."
+      );
+
+    }
+
+
+    showAddMemberMessage(
+      data.message ||
+      "Membre créé avec succès.",
+      "success"
+    );
+
+
+    button.textContent =
+      "✅ Membre créé";
+
+
+    // Actualiser le dashboard
+
+    setTimeout(
+      async () => {
+
+        closeAddMemberModal();
+
+
+        await renderAdminDashboard();
+
+      },
+      1200
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "Erreur création membre:",
+      error
+    );
+
+
+    showAddMemberMessage(
+
+      error?.message ||
+      "Une erreur est survenue lors de la création."
+
+    );
+
+
+    button.disabled =
+      false;
+
+
+    button.textContent =
+      "👤 Créer le membre";
+
+  }
+
+}
+
+
+/* =========================================================
+   58. INTÉGRATION AU DASHBOARD
+========================================================= */
+
+const previousRenderAdminDashboard =
+  renderAdminDashboard;
+
+
+renderAdminDashboard =
+  async function() {
+
+    await previousRenderAdminDashboard();
+
+
+    createAddMemberButton();
+
+    createAddMemberModal();
+
+    updatePremiumDaysVisibility();
+
+  };
+
+
+/* =========================================================
+   59. EXPORT
+========================================================= */
+
+window.createAddMemberButton =
+  createAddMemberButton;
+
+window.openAddMemberModal =
+  openAddMemberModal;
+
+window.closeAddMemberModal =
+  closeAddMemberModal;
+
+window.createMemberFromAdmin =
+  createMemberFromAdmin;
+
+
+/* =========================================================
+   FIN AJOUT MEMBRE ADMIN
+========================================================= */
