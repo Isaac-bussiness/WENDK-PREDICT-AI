@@ -38,7 +38,7 @@ const supabaseClient = window.supabase
       SUPABASE_KEY
     )
   : null;
-
+const FOOTBALL_API_KEY = "747b09d2156ea2cb38237bb32596e13e";
 
 /* =========================================================
    3. OUTILS
