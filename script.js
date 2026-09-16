@@ -2748,3 +2748,581 @@ window.searchAdminMembers =
 console.log(
   "WENDK PREDICT PRO V3 — Supabase connecté"
 );
+/* =========================================================
+   WENDK PREDICT PRO V3
+   STATISTIQUES ADMIN
+========================================================= */
+
+
+/* =========================================================
+   46. CRÉER LE PANNEAU STATISTIQUES
+========================================================= */
+
+function createAdminStatsPanel() {
+
+  const dashboard =
+    $("adminDashboard");
+
+  if (!dashboard) {
+    return null;
+  }
+
+
+  let panel =
+    $("wendkAdminStats");
+
+
+  if (panel) {
+    return panel;
+  }
+
+
+  panel =
+    document.createElement("div");
+
+  panel.id =
+    "wendkAdminStats";
+
+
+  panel.innerHTML = `
+
+    <div style="
+      margin:20px 0;
+      padding:20px;
+      border-radius:16px;
+      background:#ffffff;
+      box-shadow:0 8px 25px rgba(0,0,0,.08);
+    ">
+
+      <h2 style="
+        margin-top:0;
+        margin-bottom:18px;
+      ">
+        📊 Statistiques WENDK PREDICT PRO
+      </h2>
+
+
+      <div style="
+        display:grid;
+        grid-template-columns:
+          repeat(auto-fit,minmax(180px,1fr));
+        gap:14px;
+      ">
+
+
+        <div class="wendk-stat-card">
+          <div class="wendk-stat-icon">👥</div>
+          <div class="wendk-stat-label">
+            Total membres
+          </div>
+          <div id="statTotalMembers"
+               class="wendk-stat-value">
+            0
+          </div>
+        </div>
+
+
+        <div class="wendk-stat-card">
+          <div class="wendk-stat-icon">🟢</div>
+          <div class="wendk-stat-label">
+            Premium actifs
+          </div>
+          <div id="statPremiumActive"
+               class="wendk-stat-value">
+            0
+          </div>
+        </div>
+
+
+        <div class="wendk-stat-card">
+          <div class="wendk-stat-icon">⚪</div>
+          <div class="wendk-stat-label">
+            Membres gratuits
+          </div>
+          <div id="statFreeMembers"
+               class="wendk-stat-value">
+            0
+          </div>
+        </div>
+
+
+        <div class="wendk-stat-card">
+          <div class="wendk-stat-icon">⏰</div>
+          <div class="wendk-stat-label">
+            Premium expirés
+          </div>
+          <div id="statExpiredPremium"
+               class="wendk-stat-value">
+            0
+          </div>
+        </div>
+
+
+        <div class="wendk-stat-card">
+          <div class="wendk-stat-icon">💰</div>
+          <div class="wendk-stat-label">
+            Paiements vérifiés
+          </div>
+          <div id="statVerifiedPayments"
+               class="wendk-stat-value">
+            0
+          </div>
+        </div>
+
+
+        <div class="wendk-stat-card">
+          <div class="wendk-stat-icon">📅</div>
+          <div class="wendk-stat-label">
+            Paiements 30 jours
+          </div>
+          <div id="statPayments30Days"
+               class="wendk-stat-value">
+            0
+          </div>
+        </div>
+
+
+        <div class="wendk-stat-card">
+          <div class="wendk-stat-icon">💎</div>
+          <div class="wendk-stat-label">
+            Abonnements Premium
+          </div>
+          <div id="statSubscriptions"
+               class="wendk-stat-value">
+            0
+          </div>
+        </div>
+
+
+        <div class="wendk-stat-card">
+          <div class="wendk-stat-icon">📈</div>
+          <div class="wendk-stat-label">
+            Revenus vérifiés
+          </div>
+          <div id="statRevenue"
+               class="wendk-stat-value">
+            0 FCFA
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  `;
+
+
+  /*
+    On place les statistiques en haut
+    du tableau de bord admin.
+  */
+
+  dashboard.prepend(panel);
+
+
+  return panel;
+}
+
+
+/* =========================================================
+   47. STYLE DES STATISTIQUES
+========================================================= */
+
+function addAdminStatsStyles() {
+
+  if ($("wendkAdminStatsStyles")) {
+    return;
+  }
+
+
+  const style =
+    document.createElement("style");
+
+
+  style.id =
+    "wendkAdminStatsStyles";
+
+
+  style.textContent = `
+
+    .wendk-stat-card {
+      padding:18px;
+      border-radius:14px;
+      background:#f8fafc;
+      border:1px solid #e5e7eb;
+      transition:
+        transform .2s ease,
+        box-shadow .2s ease;
+    }
+
+
+    .wendk-stat-card:hover {
+      transform:translateY(-3px);
+      box-shadow:
+        0 8px 20px rgba(0,0,0,.08);
+    }
+
+
+    .wendk-stat-icon {
+      font-size:28px;
+      margin-bottom:8px;
+    }
+
+
+    .wendk-stat-label {
+      font-size:14px;
+      color:#64748b;
+      margin-bottom:6px;
+    }
+
+
+    .wendk-stat-value {
+      font-size:24px;
+      font-weight:800;
+      color:#111827;
+    }
+
+
+    @media(max-width:600px) {
+
+      .wendk-stat-value {
+        font-size:21px;
+      }
+
+      #wendkAdminStats {
+        margin-left:0;
+        margin-right:0;
+      }
+
+    }
+
+  `;
+
+
+  document.head.appendChild(style);
+}
+
+
+/* =========================================================
+   48. CALCULER LES STATISTIQUES
+========================================================= */
+
+async function updateAdminStats() {
+
+  const auth =
+    await requireAdmin();
+
+
+  if (!auth) {
+    return;
+  }
+
+
+  createAdminStatsPanel();
+
+  addAdminStatsStyles();
+
+
+  const members =
+    await getMembers();
+
+
+  const payments =
+    await getAllPayments();
+
+
+  const subscriptions =
+    await getAllSubscriptions();
+
+
+  const now =
+    new Date();
+
+
+  const thirtyDaysAgo =
+    new Date();
+
+
+  thirtyDaysAgo.setDate(
+    thirtyDaysAgo.getDate() - 30
+  );
+
+
+  /* -----------------------------------------
+     MEMBRES PREMIUM ACTIFS
+  ----------------------------------------- */
+
+  const activePremiumMembers =
+    members.filter(member => {
+
+      return subscriptions.some(
+        subscription => {
+
+          return (
+            subscription.user_id ===
+              member.id &&
+
+            new Date(
+              subscription.expires_at
+            ) > now
+          );
+
+        }
+      );
+
+    });
+
+
+  /* -----------------------------------------
+     MEMBRES GRATUITS
+  ----------------------------------------- */
+
+  const freeMembers =
+    members.filter(member => {
+
+      return !activePremiumMembers.some(
+        premiumMember =>
+          premiumMember.id === member.id
+      );
+
+    });
+
+
+  /* -----------------------------------------
+     PREMIUM EXPIRÉS
+  ----------------------------------------- */
+
+  const expiredPremiums =
+    members.filter(member => {
+
+      return subscriptions.some(
+        subscription => {
+
+          return (
+            subscription.user_id ===
+              member.id &&
+
+            new Date(
+              subscription.expires_at
+            ) <= now
+          );
+
+        }
+      );
+
+    });
+
+
+  /* -----------------------------------------
+     PAIEMENTS VÉRIFIÉS
+  ----------------------------------------- */
+
+  const verifiedPayments =
+    payments.filter(
+      payment =>
+        payment.verified === true
+    );
+
+
+  /* -----------------------------------------
+     PAIEMENTS DES 30 DERNIERS JOURS
+  ----------------------------------------- */
+
+  const payments30Days =
+    verifiedPayments.filter(
+      payment => {
+
+        const paymentDate =
+          new Date(
+            payment.created_at
+          );
+
+
+        return (
+          paymentDate >=
+          thirtyDaysAgo
+        );
+
+      }
+    );
+
+
+  /* -----------------------------------------
+     REVENUS
+  ----------------------------------------- */
+
+  const totalRevenue =
+    verifiedPayments.reduce(
+      (total, payment) => {
+
+        return (
+          total +
+          Number(
+            payment.amount || 0
+          )
+        );
+
+      },
+      0
+    );
+
+
+  const revenue30Days =
+    payments30Days.reduce(
+      (total, payment) => {
+
+        return (
+          total +
+          Number(
+            payment.amount || 0
+          )
+        );
+
+      },
+      0
+    );
+
+
+  /* -----------------------------------------
+     MISE À JOUR AFFICHAGE
+  ----------------------------------------- */
+
+  if ($("statTotalMembers")) {
+
+    $("statTotalMembers").textContent =
+      members.length;
+  }
+
+
+  if ($("statPremiumActive")) {
+
+    $("statPremiumActive").textContent =
+      activePremiumMembers.length;
+  }
+
+
+  if ($("statFreeMembers")) {
+
+    $("statFreeMembers").textContent =
+      freeMembers.length;
+  }
+
+
+  if ($("statExpiredPremium")) {
+
+    $("statExpiredPremium").textContent =
+      expiredPremiums.length;
+  }
+
+
+  if ($("statVerifiedPayments")) {
+
+    $("statVerifiedPayments").textContent =
+      verifiedPayments.length;
+  }
+
+
+  if ($("statPayments30Days")) {
+
+    $("statPayments30Days").textContent =
+      payments30Days.length;
+  }
+
+
+  if ($("statSubscriptions")) {
+
+    $("statSubscriptions").textContent =
+      subscriptions.length;
+  }
+
+
+  if ($("statRevenue")) {
+
+    $("statRevenue").textContent =
+      totalRevenue.toLocaleString(
+        "fr-FR"
+      ) +
+      " FCFA";
+  }
+
+
+  console.log(
+    "WENDK — Statistiques admin actualisées",
+    {
+      totalMembers:
+        members.length,
+
+      premiumActive:
+        activePremiumMembers.length,
+
+      freeMembers:
+        freeMembers.length,
+
+      expiredPremium:
+        expiredPremiums.length,
+
+      verifiedPayments:
+        verifiedPayments.length,
+
+      payments30Days:
+        payments30Days.length,
+
+      subscriptions:
+        subscriptions.length,
+
+      revenue:
+        totalRevenue,
+
+      revenue30Days:
+        revenue30Days
+    }
+  );
+}
+
+
+/* =========================================================
+   49. INTÉGRATION AU DASHBOARD ADMIN
+========================================================= */
+
+const originalAdminDashboard =
+  renderAdminDashboard;
+
+
+renderAdminDashboard =
+  async function () {
+
+    await originalAdminDashboard();
+
+
+    /*
+      Laisser le temps au dashboard
+      d'être affiché avant d'ajouter
+      les statistiques.
+    */
+
+    setTimeout(
+      async () => {
+
+        await updateAdminStats();
+
+      },
+      100
+    );
+
+  };
+
+
+/* =========================================================
+   50. EXPORT
+========================================================= */
+
+window.createAdminStatsPanel =
+  createAdminStatsPanel;
+
+window.updateAdminStats =
+  updateAdminStats;
+
+
+/* =========================================================
+   FIN STATISTIQUES ADMIN
+========================================================= */
