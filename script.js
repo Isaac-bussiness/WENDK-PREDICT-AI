@@ -3,82 +3,58 @@
 /* =========================================================
    WENDK PREDICT PRO V3
    SCRIPT.JS — BLOC 1/3
-   SUPABASE + AUTHENTIFICATION + PROFILS
+   Supabase + Authentification + Navigation
 ========================================================= */
 
 
 /* =========================================================
-   1. CONNEXION SUPABASE
+   1. CONFIGURATION
 ========================================================= */
 
-const SUPABASE_URL =
-  "https://ujhghwjdecmuuqvllock.supabase.co";
+const SUPABASE_URL = "https://ujhghwjdecmuuqvllock.supabase.co";
 
 const SUPABASE_KEY =
   "sb_publishable_1luIJ43-R4_FXbjFuHrdiA_nLc5CEoO";
 
-const supabaseClient =
-  window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-  );
+const WHATSAPP_NUMBER = "22607309472";
 
-console.log(
-  "WENDK PREDICT PRO — Supabase connecté"
-);
+const WHATSAPP_URL =
+  "https://wa.me/" + WHATSAPP_NUMBER;
 
 
 /* =========================================================
-   2. CONFIGURATION
+   2. INITIALISATION SUPABASE
 ========================================================= */
 
-const WHATSAPP_NUMBER =
-  "22607309472";
+if (!window.supabase) {
+  console.error(
+    "Supabase n'est pas chargé. Vérifie que le CDN Supabase est placé avant script.js."
+  );
+}
 
-const WHATSAPP_URL =
-  "https://wa.me/" +
-  WHATSAPP_NUMBER;
+const supabaseClient = window.supabase
+  ? window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_KEY
+    )
+  : null;
 
 
 /* =========================================================
    3. OUTILS
 ========================================================= */
 
-function formatDate(date) {
-
-  if (!date) return "—";
-
-  return new Date(date).toLocaleDateString(
-    "fr-FR",
-    {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric"
-    }
-  );
-}
-
-
-function formatDateTime(date) {
-
-  if (!date) return "—";
-
-  return new Date(date).toLocaleString(
-    "fr-FR",
-    {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
-    }
-  );
+function $(id) {
+  return document.getElementById(id);
 }
 
 
 function escapeHTML(value) {
+  if (value === null || value === undefined) {
+    return "";
+  }
 
-  return String(value ?? "")
+  return String(value)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -87,24 +63,55 @@ function escapeHTML(value) {
 }
 
 
-function showMessage(
-  elementId,
-  text,
-  className = "success-message"
-) {
+function formatDate(dateValue) {
+  if (!dateValue) {
+    return "Non définie";
+  }
 
-  const element =
-    document.getElementById(
-      elementId
-    );
+  const date = new Date(dateValue);
 
-  if (!element) return;
+  if (Number.isNaN(date.getTime())) {
+    return "Date invalide";
+  }
 
-  element.className =
-    className;
+  return date.toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  });
+}
 
-  element.textContent =
-    text;
+
+function formatDateTime(dateValue) {
+  if (!dateValue) {
+    return "Non définie";
+  }
+
+  const date = new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Date invalide";
+  }
+
+  return date.toLocaleString("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+
+function showMessage(elementId, message, type = "info") {
+  const element = $(elementId);
+
+  if (!element) {
+    return;
+  }
+
+  element.textContent = message;
+  element.className = "message " + type;
 }
 
 
@@ -114,29 +121,20 @@ function showMessage(
 
 function showSection(sectionId) {
 
-  document
-    .querySelectorAll(".section")
-    .forEach(section => {
-
-      section.classList.remove(
-        "active"
-      );
-
-    });
-
-
-  const section =
-    document.getElementById(
-      sectionId
-    );
-
-
-  if (!section) return;
-
-
-  section.classList.add(
-    "active"
+  const sections = document.querySelectorAll(
+    ".section"
   );
+
+  sections.forEach(section => {
+    section.style.display = "none";
+  });
+
+
+  const target = $(sectionId);
+
+  if (target) {
+    target.style.display = "block";
+  }
 
 
   window.scrollTo({
@@ -145,299 +143,198 @@ function showSection(sectionId) {
   });
 
 
-  if (
-    sectionId ===
-    "memberDashboard"
-  ) {
-
-    renderMemberDashboard();
-
+  if (sectionId === "predictions") {
+    if (typeof renderPredictions === "function") {
+      renderPredictions();
+    }
   }
 
 
-  if (
-    sectionId ===
-    "adminDashboard"
-  ) {
-
-    renderAdminDashboard();
-
+  if (sectionId === "memberDashboard") {
+    if (typeof renderMemberDashboard === "function") {
+      renderMemberDashboard();
+    }
   }
 
 
-  if (
-    sectionId ===
-    "predictions"
-  ) {
-
-    renderPredictions();
-
+  if (sectionId === "adminDashboard") {
+    if (typeof renderAdminDashboard === "function") {
+      renderAdminDashboard();
+    }
   }
-
 }
 
 
 /* =========================================================
-   5. UTILISATEUR SUPABASE ACTUEL
+   5. ACCUEIL
 ========================================================= */
 
-async function getCurrentAuthUser() {
-
-  try {
-
-    const {
-      data,
-      error
-    } =
-      await supabaseClient.auth
-        .getUser();
+function goHome() {
+  showSection("home");
+}
 
 
-    if (error) {
+/* =========================================================
+   6. PROFIL SUPABASE
+========================================================= */
 
-      console.error(
-        "Erreur utilisateur Supabase:",
-        error
-      );
+async function getProfile(userId) {
 
-      return null;
-
-    }
-
-
-    return data?.user || null;
+  if (!supabaseClient || !userId) {
+    return null;
+  }
 
 
-  } catch (error) {
+  const { data, error } = await supabaseClient
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .maybeSingle();
 
+
+  if (error) {
     console.error(
-      "Erreur Auth:",
+      "Erreur récupération profil :",
       error
     );
 
     return null;
-
   }
 
+
+  return data;
 }
 
 
 /* =========================================================
-   6. RÉCUPÉRER LE PROFIL
-========================================================= */
-
-async function getProfile(
-  userId
-) {
-
-  if (!userId) return null;
-
-
-  try {
-
-    const {
-      data,
-      error
-    } =
-      await supabaseClient
-        .from("profiles")
-        .select("*")
-        .eq(
-          "id",
-          userId
-        )
-        .maybeSingle();
-
-
-    if (error) {
-
-      console.error(
-        "Erreur profil:",
-        error
-      );
-
-      return null;
-
-    }
-
-
-    return data || null;
-
-
-  } catch (error) {
-
-    console.error(
-      "Erreur récupération profil:",
-      error
-    );
-
-    return null;
-
-  }
-
-}
-
-
-/* =========================================================
-   7. RÉCUPÉRER L'UTILISATEUR COMPLET
+   7. UTILISATEUR ACTUEL
 ========================================================= */
 
 async function getCurrentUser() {
 
-  const authUser =
-    await getCurrentAuthUser();
-
-
-  if (!authUser) {
-
+  if (!supabaseClient) {
     return null;
-
   }
 
 
-  const profile =
-    await getProfile(
-      authUser.id
+  const {
+    data,
+    error
+  } = await supabaseClient.auth.getUser();
+
+
+  if (error) {
+    console.error(
+      "Erreur utilisateur actuel :",
+      error
     );
 
-
-  /*
-    Si le profil existe :
-    on combine Auth + profiles.
-  */
-
-  if (profile) {
-
-    return {
-
-      ...profile,
-
-      email:
-        authUser.email || ""
-
-    };
-
+    return null;
   }
 
 
-  /*
-    Sécurité de secours :
-    si le trigger n'a pas encore
-    créé le profil.
-  */
-
-  return {
-
-    id:
-      authUser.id,
-
-    name:
-      authUser.user_metadata?.name ||
-      "Membre",
-
-    whatsapp:
-      authUser.user_metadata?.whatsapp ||
-      "",
-
-    email:
-      authUser.email || "",
-
-    role:
-      "member"
-
-  };
-
+  return data?.user || null;
 }
 
 
 /* =========================================================
-   8. INSCRIPTION MEMBRE
+   8. INSCRIPTION
 ========================================================= */
 
 async function register(event) {
 
-  event.preventDefault();
+  if (event) {
+    event.preventDefault();
+  }
 
 
   const name =
-    document
-      .getElementById(
-        "registerName"
-      )
-      .value
-      .trim();
-
+    $("registerName")?.value.trim() || "";
 
   const whatsapp =
-    document
-      .getElementById(
-        "registerWhatsapp"
-      )
-      .value
-      .trim();
-
+    $("registerWhatsapp")?.value.trim() || "";
 
   const email =
-    document
-      .getElementById(
-        "registerEmail"
-      )
-      .value
+    $("registerEmail")?.value
       .trim()
-      .toLowerCase();
-
+      .toLowerCase() || "";
 
   const password =
-    document
-      .getElementById(
-        "registerPassword"
-      )
-      .value;
+    $("registerPassword")?.value || "";
 
 
-  const message =
-    document.getElementById(
-      "registerMessage"
+  showMessage(
+    "registerMessage",
+    "",
+    "info"
+  );
+
+
+  if (!name) {
+
+    showMessage(
+      "registerMessage",
+      "Veuillez entrer votre nom.",
+      "error"
     );
 
-
-  if (
-    !name ||
-    !email ||
-    !password
-  ) {
-
-    message.className =
-      "error-message";
-
-    message.textContent =
-      "Veuillez remplir tous les champs obligatoires.";
-
     return;
-
   }
 
 
-  if (
-    password.length < 6
-  ) {
+  if (!whatsapp) {
 
-    message.className =
-      "error-message";
-
-    message.textContent =
-      "Le mot de passe doit contenir au moins 6 caractères.";
+    showMessage(
+      "registerMessage",
+      "Veuillez entrer votre numéro WhatsApp.",
+      "error"
+    );
 
     return;
-
   }
 
 
-  message.className =
-    "success-message";
+  if (!email) {
 
-  message.textContent =
-    "Création du compte en cours...";
+    showMessage(
+      "registerMessage",
+      "Veuillez entrer votre adresse email.",
+      "error"
+    );
+
+    return;
+  }
+
+
+  if (!password || password.length < 6) {
+
+    showMessage(
+      "registerMessage",
+      "Le mot de passe doit contenir au moins 6 caractères.",
+      "error"
+    );
+
+    return;
+  }
+
+
+  if (!supabaseClient) {
+
+    showMessage(
+      "registerMessage",
+      "Supabase n'est pas disponible.",
+      "error"
+    );
+
+    return;
+  }
+
+
+  showMessage(
+    "registerMessage",
+    "Création de votre compte...",
+    "info"
+  );
 
 
   try {
@@ -445,121 +342,93 @@ async function register(event) {
     const {
       data,
       error
-    } =
-      await supabaseClient.auth
-        .signUp({
+    } = await supabaseClient.auth.signUp({
 
-          email:
-            email,
+      email: email,
 
-          password:
-            password,
+      password: password,
 
-          options: {
+      options: {
+        data: {
+          name: name,
+          whatsapp: whatsapp
+        }
+      }
 
-            data: {
-
-              name:
-                name,
-
-              whatsapp:
-                whatsapp
-
-            }
-
-          }
-
-        });
+    });
 
 
     if (error) {
 
       console.error(
-        "Erreur inscription:",
+        "Erreur inscription :",
         error
       );
 
-      message.className =
-        "error-message";
-
-      message.textContent =
-        error.message ||
-        "Impossible de créer le compte.";
+      showMessage(
+        "registerMessage",
+        error.message,
+        "error"
+      );
 
       return;
-
     }
 
 
     if (!data?.user) {
 
-      message.className =
-        "error-message";
-
-      message.textContent =
-        "Le compte n'a pas pu être créé.";
+      showMessage(
+        "registerMessage",
+        "Impossible de créer le compte.",
+        "error"
+      );
 
       return;
-
     }
+
+
+    showMessage(
+      "registerMessage",
+      "Compte créé avec succès.",
+      "success"
+    );
 
 
     /*
-      Si Supabase retourne une session,
-      l'utilisateur est immédiatement connecté.
+      Si la confirmation email est activée
+      dans Supabase, l'utilisateur devra
+      confirmer son adresse email.
     */
 
-    if (data.session) {
+    if (!data.session) {
 
-      message.className =
-        "success-message";
-
-      message.textContent =
-        "✅ Compte créé avec succès.";
-
-
-      setTimeout(
-        () => {
-
-          showSection(
-            "memberDashboard"
-          );
-
-        },
-        700
+      showMessage(
+        "registerMessage",
+        "Compte créé. Vérifiez votre email si Supabase demande une confirmation.",
+        "success"
       );
 
-    } else {
-
-      /*
-        Si la confirmation email
-        est activée dans Supabase.
-      */
-
-      message.className =
-        "success-message";
-
-      message.textContent =
-        "✅ Compte créé. Vérifiez votre adresse email pour confirmer votre compte.";
-
+      return;
     }
 
+
+    showSection("memberDashboard");
+
+    await renderMemberDashboard();
 
   } catch (error) {
 
     console.error(
-      "Erreur inscription:",
+      "Erreur inattendue inscription :",
       error
     );
 
-    message.className =
-      "error-message";
-
-    message.textContent =
-      "Une erreur est survenue lors de la création du compte.";
-
+    showMessage(
+      "registerMessage",
+      "Une erreur est survenue pendant l'inscription.",
+      "error"
+    );
   }
-
 }
 
 
@@ -569,54 +438,49 @@ async function register(event) {
 
 async function login(event) {
 
-  event.preventDefault();
-
-
-  const email =
-    document
-      .getElementById(
-        "loginEmail"
-      )
-      .value
-      .trim()
-      .toLowerCase();
-
-
-  const password =
-    document
-      .getElementById(
-        "loginPassword"
-      )
-      .value;
-
-
-  const message =
-    document.getElementById(
-      "loginMessage"
-    );
-
-
-  if (
-    !email ||
-    !password
-  ) {
-
-    message.className =
-      "error-message";
-
-    message.textContent =
-      "Veuillez saisir votre email et votre mot de passe.";
-
-    return;
-
+  if (event) {
+    event.preventDefault();
   }
 
 
-  message.className =
-    "success-message";
+  const email =
+    $("loginEmail")?.value
+      .trim()
+      .toLowerCase() || "";
 
-  message.textContent =
-    "Connexion en cours...";
+  const password =
+    $("loginPassword")?.value || "";
+
+
+  if (!email || !password) {
+
+    showMessage(
+      "loginMessage",
+      "Veuillez remplir tous les champs.",
+      "error"
+    );
+
+    return;
+  }
+
+
+  if (!supabaseClient) {
+
+    showMessage(
+      "loginMessage",
+      "Supabase n'est pas disponible.",
+      "error"
+    );
+
+    return;
+  }
+
+
+  showMessage(
+    "loginMessage",
+    "Connexion en cours...",
+    "info"
+  );
 
 
   try {
@@ -624,512 +488,652 @@ async function login(event) {
     const {
       data,
       error
-    } =
-      await supabaseClient.auth
-        .signInWithPassword({
+    } = await supabaseClient.auth.signInWithPassword({
 
-          email:
-            email,
+      email: email,
 
-          password:
-            password
+      password: password
 
-        });
+    });
 
 
     if (error) {
 
       console.error(
-        "Erreur connexion:",
+        "Erreur connexion :",
         error
       );
 
-      message.className =
-        "error-message";
-
-      message.textContent =
-        "Email ou mot de passe incorrect.";
+      showMessage(
+        "loginMessage",
+        error.message,
+        "error"
+      );
 
       return;
-
     }
 
 
     if (!data?.user) {
 
-      message.className =
-        "error-message";
-
-      message.textContent =
-        "Utilisateur introuvable.";
+      showMessage(
+        "loginMessage",
+        "Connexion impossible.",
+        "error"
+      );
 
       return;
+    }
+
+
+    const profile =
+      await getProfile(data.user.id);
+
+
+    if (profile?.role === "admin") {
+
+      showSection("adminDashboard");
+
+      await renderAdminDashboard();
+
+    } else {
+
+      showSection("memberDashboard");
+
+      await renderMemberDashboard();
 
     }
 
 
-    message.className =
-      "success-message";
-
-    message.textContent =
-      "✅ Connexion réussie.";
-
-
-    setTimeout(
-      () => {
-
-        showSection(
-          "memberDashboard"
-        );
-
-      },
-      500
+    showMessage(
+      "loginMessage",
+      "Connexion réussie.",
+      "success"
     );
-
 
   } catch (error) {
 
     console.error(
-      "Erreur connexion:",
+      "Erreur inattendue connexion :",
       error
     );
 
-    message.className =
-      "error-message";
-
-    message.textContent =
-      "Une erreur est survenue lors de la connexion.";
-
+    showMessage(
+      "loginMessage",
+      "Une erreur est survenue pendant la connexion.",
+      "error"
+    );
   }
-
 }
 
 
 /* =========================================================
-   10. DÉCONNEXION
+   10. CONNEXION ADMIN
+   Compatible avec l'ancien formulaire :
+   adminUsername = email administrateur
+   adminPassword = mot de passe Supabase
 ========================================================= */
 
-async function logout() {
+async function adminLogin(event) {
+
+  if (event) {
+    event.preventDefault();
+  }
+
+
+  const email =
+    $("adminUsername")?.value
+      .trim()
+      .toLowerCase() || "";
+
+  const password =
+    $("adminPassword")?.value || "";
+
+
+  if (!email || !password) {
+
+    showMessage(
+      "adminLoginMessage",
+      "Entrez l'email et le mot de passe de votre compte administrateur.",
+      "error"
+    );
+
+    return;
+  }
+
+
+  if (!supabaseClient) {
+
+    showMessage(
+      "adminLoginMessage",
+      "Supabase n'est pas disponible.",
+      "error"
+    );
+
+    return;
+  }
+
+
+  showMessage(
+    "adminLoginMessage",
+    "Connexion administrateur...",
+    "info"
+  );
+
 
   try {
 
     const {
+      data,
       error
-    } =
-      await supabaseClient.auth
-        .signOut();
+    } = await supabaseClient.auth.signInWithPassword({
+
+      email: email,
+
+      password: password
+
+    });
 
 
     if (error) {
 
       console.error(
-        "Erreur déconnexion:",
+        "Erreur connexion admin :",
         error
       );
 
+      showMessage(
+        "adminLoginMessage",
+        "Email ou mot de passe incorrect.",
+        "error"
+      );
+
+      return;
     }
 
+
+    const profile =
+      await getProfile(data.user.id);
+
+
+    if (!profile || profile.role !== "admin") {
+
+      await supabaseClient.auth.signOut();
+
+      showMessage(
+        "adminLoginMessage",
+        "Ce compte n'a pas les droits administrateur.",
+        "error"
+      );
+
+      return;
+    }
+
+
+    showMessage(
+      "adminLoginMessage",
+      "Connexion administrateur réussie.",
+      "success"
+    );
+
+
+    showSection("adminDashboard");
+
+    await renderAdminDashboard();
 
   } catch (error) {
 
     console.error(
-      "Erreur logout:",
+      "Erreur admin :",
       error
     );
 
+    showMessage(
+      "adminLoginMessage",
+      "Une erreur est survenue.",
+      "error"
+    );
+  }
+}
+
+
+/* =========================================================
+   11. DÉCONNEXION
+========================================================= */
+
+async function logout() {
+
+  if (!supabaseClient) {
+    return;
   }
 
 
-  showSection(
-    "home"
-  );
+  try {
 
-}
+    await supabaseClient.auth.signOut();
 
+    showSection("home");
 
-/* =========================================================
-   11. ÉCOUTER LES CHANGEMENTS DE SESSION
-========================================================= */
+  } catch (error) {
 
-function listenAuthChanges() {
-
-  supabaseClient.auth
-    .onAuthStateChange(
-      (
-        event,
-        session
-      ) => {
-
-        console.log(
-          "Supabase Auth:",
-          event
-        );
-
-
-        if (
-          event ===
-          "SIGNED_OUT"
-        ) {
-
-          showSection(
-            "home"
-          );
-
-          return;
-
-        }
-
-
-        if (
-          event ===
-          "SIGNED_IN" ||
-          event ===
-          "TOKEN_REFRESHED"
-        ) {
-
-          renderPredictions();
-
-        }
-
-      }
+    console.error(
+      "Erreur déconnexion :",
+      error
     );
-
+  }
 }
 
 
 /* =========================================================
-   12. INITIALISATION DU BLOC 1
+   12. ÉTAT DE SESSION
 ========================================================= */
 
-async function initAuth() {
+async function handleAuthState() {
+
+  if (!supabaseClient) {
+    return;
+  }
+
 
   try {
 
-    const user =
-      await getCurrentUser();
+    const {
+      data
+    } = await supabaseClient.auth.getSession();
 
 
-    if (user) {
+    const session =
+      data?.session;
 
-      console.log(
-        "Membre connecté :",
-        user.email
+
+    if (!session) {
+      return;
+    }
+
+
+    const profile =
+      await getProfile(
+        session.user.id
       );
+
+
+    if (profile?.role === "admin") {
+
+      showSection("adminDashboard");
+
+      if (typeof renderAdminDashboard === "function") {
+        await renderAdminDashboard();
+      }
 
     } else {
 
-      console.log(
-        "Aucun membre connecté."
-      );
+      showSection("memberDashboard");
 
+      if (typeof renderMemberDashboard === "function") {
+        await renderMemberDashboard();
+      }
     }
-
-
-    listenAuthChanges();
-
 
   } catch (error) {
 
     console.error(
-      "Erreur initialisation Auth:",
+      "Erreur vérification session :",
       error
     );
-
   }
-
 }
+
+
+/* =========================================================
+   13. ÉCOUTEUR AUTHENTIFICATION
+========================================================= */
+
+if (supabaseClient) {
+
+  supabaseClient.auth.onAuthStateChange(
+    async (event, session) => {
+
+      console.log(
+        "État Auth Supabase :",
+        event
+      );
+
+      if (!session) {
+        return;
+      }
+
+      /*
+        On évite de changer brutalement
+        de page pendant INITIAL_SESSION
+        si l'utilisateur est déjà sur une
+        section publique.
+      */
+
+      if (
+        event === "SIGNED_IN" ||
+        event === "INITIAL_SESSION"
+      ) {
+
+        const profile =
+          await getProfile(
+            session.user.id
+          );
+
+
+        if (profile?.role === "admin") {
+
+          showSection("adminDashboard");
+
+          if (
+            typeof renderAdminDashboard ===
+            "function"
+          ) {
+            await renderAdminDashboard();
+          }
+
+        } else {
+
+          showSection("memberDashboard");
+
+          if (
+            typeof renderMemberDashboard ===
+            "function"
+          ) {
+            await renderMemberDashboard();
+          }
+        }
+      }
+    }
+  );
+}
+
+
+/* =========================================================
+   14. CONTACT PREMIUM WHATSAPP
+========================================================= */
+
+function contactPremium() {
+
+  const message =
+    "Bonjour WENDK PREDICT PRO, je souhaite souscrire à l'offre Premium.";
+
+  const url =
+    WHATSAPP_URL +
+    "?text=" +
+    encodeURIComponent(message);
+
+
+  window.open(
+    url,
+    "_blank"
+  );
+}
+
+
+/* =========================================================
+   15. EXPORT DES FONCTIONS
+   Nécessaire pour les boutons HTML
+   utilisant onclick=""
+========================================================= */
+
+window.showSection = showSection;
+
+window.goHome = goHome;
+
+window.register = register;
+
+window.login = login;
+
+window.adminLogin = adminLogin;
+
+window.logout = logout;
+
+window.contactPremium = contactPremium;
+
+
+/* =========================================================
+   FIN DU BLOC 1/3
+========================================================= */
 /* =========================================================
    WENDK PREDICT PRO V3
    SCRIPT.JS — BLOC 2/3
-   PREMIUM + PRÉDICTIONS + ESPACE MEMBRE
+   Prédictions + Premium + Espace membre
 ========================================================= */
 
 
 /* =========================================================
-   13. RÉCUPÉRER L'ABONNEMENT ACTIF
+   16. RÉCUPÉRER L'ABONNEMENT ACTIF
 ========================================================= */
 
 async function getActiveSubscription(userId) {
-  if (!userId) return null;
 
-  try {
-    const { data, error } = await supabaseClient
-      .from("subscriptions")
-      .select("*")
-      .eq("user_id", userId)
-      .gt("expires_at", new Date().toISOString())
-      .order("expires_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (error) {
-      console.error("Erreur abonnement:", error);
-      return null;
-    }
-
-    return data || null;
-
-  } catch (error) {
-    console.error("Erreur récupération abonnement:", error);
+  if (!supabaseClient || !userId) {
     return null;
   }
+
+  const now = new Date().toISOString();
+
+  const { data, error } = await supabaseClient
+    .from("subscriptions")
+    .select("*")
+    .eq("user_id", userId)
+    .gt("expires_at", now)
+    .order("expires_at", {
+      ascending: false
+    })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error(
+      "Erreur abonnement :",
+      error
+    );
+
+    return null;
+  }
+
+  return data;
 }
 
 
 /* =========================================================
-   14. VÉRIFIER LE PREMIUM
+   17. VÉRIFIER PREMIUM
 ========================================================= */
 
-async function checkPremiumStatus(userId) {
-  const subscription = await getActiveSubscription(userId);
+async function checkPremium(userId) {
+
+  const subscription =
+    await getActiveSubscription(userId);
+
+  return !!subscription;
+}
+
+
+/* =========================================================
+   18. OBTENIR L'EXPIRATION PREMIUM
+========================================================= */
+
+async function getPremiumExpiration(userId) {
+
+  const subscription =
+    await getActiveSubscription(userId);
 
   if (!subscription) {
-    return {
-      premium: false,
-      subscription: null,
-      expiration: null
-    };
+    return null;
   }
 
-  const expiration = new Date(subscription.expires_at);
-  const now = new Date();
-
-  return {
-    premium: expiration > now,
-    subscription: subscription,
-    expiration: subscription.expires_at
-  };
+  return subscription.expires_at;
 }
 
 
 /* =========================================================
-   15. VÉRIFIER L'ACCÈS PREMIUM DE L'UTILISATEUR
-========================================================= */
-
-async function checkPremiumExpiration(user) {
-
-  if (!user || !user.id) {
-    return false;
-  }
-
-  const status = await checkPremiumStatus(user.id);
-
-  if (status.premium) {
-    return true;
-  }
-
-  return false;
-}
-
-
-/* =========================================================
-   16. DONNÉES DES PRÉDICTIONS
+   19. PRÉDICTIONS
 ========================================================= */
 
 const predictions = [
 
   {
     id: 1,
-    league: "Premier League",
-    home: "Manchester United",
-    away: "Chelsea",
-    time: "18:00",
-    free: "Double chance : 1X",
-    premium: "Indication Premium : Manchester United ou nul + Plus de 1,5 buts"
+    date: "Aujourd'hui",
+    league: "Exemple — Match 1",
+    home: "Équipe A",
+    away: "Équipe B",
+    indication: "Victoire Équipe A",
+    type: "GRATUIT"
   },
 
   {
     id: 2,
-    league: "La Liga",
-    home: "Real Madrid",
-    away: "Barcelona",
-    time: "20:00",
-    free: "Plus de 1,5 buts",
-    premium: "Indication Premium : Plus de 2,5 buts"
+    date: "Aujourd'hui",
+    league: "Exemple — Match 2",
+    home: "Équipe C",
+    away: "Équipe D",
+    indication: "Plus de 1,5 buts",
+    type: "PREMIUM"
   },
 
   {
     id: 3,
-    league: "Serie A",
-    home: "Inter Milan",
-    away: "AC Milan",
-    time: "19:45",
-    free: "Double chance : 1X",
-    premium: "Indication Premium : Inter Milan gagne"
+    date: "Aujourd'hui",
+    league: "Exemple — Match 3",
+    home: "Équipe E",
+    away: "Équipe F",
+    indication: "Double chance",
+    type: "PREMIUM"
   },
 
   {
     id: 4,
-    league: "Ligue 1",
-    home: "PSG",
-    away: "Lyon",
-    time: "21:00",
-    free: "Plus de 1,5 buts",
-    premium: "Indication Premium : PSG gagne + Plus de 2,5 buts"
-  },
-
-  {
-    id: 5,
-    league: "Bundesliga",
-    home: "Bayern Munich",
-    away: "Dortmund",
-    time: "18:30",
-    free: "Plus de 1,5 buts",
-    premium: "Indication Premium : Bayern Munich gagne"
-  },
-
-  {
-    id: 6,
-    league: "Premier League",
-    home: "Liverpool",
-    away: "Arsenal",
-    time: "17:30",
-    free: "Les deux équipes marquent",
-    premium: "Indication Premium : Les deux équipes marquent + Plus de 2,5 buts"
+    date: "Aujourd'hui",
+    league: "Exemple — Match 4",
+    home: "Équipe G",
+    away: "Équipe H",
+    indication: "Moins de 3,5 buts",
+    type: "GRATUIT"
   }
 
 ];
 
 
 /* =========================================================
-   17. AFFICHER LES PRÉDICTIONS
+   20. AFFICHER LES PRÉDICTIONS
 ========================================================= */
 
 async function renderPredictions() {
 
-  const container = document.getElementById("predictionList");
+  const container =
+    $("predictionList");
 
-  if (!container) return;
+  if (!container) {
+    return;
+  }
 
-  const authUser = await getCurrentAuthUser();
+  container.innerHTML =
+    "<p>Chargement des prédictions...</p>";
+
+
+  const user =
+    await getCurrentUser();
+
 
   let isPremium = false;
 
-  if (authUser) {
-    isPremium = await checkPremiumExpiration({
-      id: authUser.id
-    });
+  if (user) {
+    isPremium =
+      await checkPremium(user.id);
   }
 
-  container.innerHTML = "";
+
+  let html = "";
+
 
   predictions.forEach(prediction => {
 
-    const card = document.createElement("div");
+    const premiumLocked =
+      prediction.type === "PREMIUM" &&
+      !isPremium;
 
-    card.className = "prediction-card";
 
-    let premiumContent = "";
+    html += `
+      <div class="prediction-card">
 
-    if (isPremium) {
+        <div class="prediction-header">
 
-      premiumContent = `
-        <div class="prediction-premium unlocked">
-          <strong>⭐ INDICATION PREMIUM</strong>
-          <p>
-            ${escapeHTML(prediction.premium)}
-          </p>
-        </div>
-      `;
+          <span>
+            ${escapeHTML(prediction.league)}
+          </span>
 
-    } else {
-
-      premiumContent = `
-        <div class="prediction-premium locked">
-
-          <strong>🔒 INDICATION PREMIUM</strong>
-
-          <p>
-            Cette indication est réservée aux membres Premium.
-          </p>
-
-          <button
-            type="button"
-            onclick="openSubscriptionWhatsApp()"
-            class="premium-button">
-            🔓 ACTIVER PREMIUM
-          </button>
+          <span>
+            ${escapeHTML(prediction.date)}
+          </span>
 
         </div>
-      `;
-    }
 
-    card.innerHTML = `
 
-      <div class="prediction-header">
+        <div class="prediction-teams">
 
-        <span class="prediction-league">
-          ${escapeHTML(prediction.league)}
-        </span>
+          <strong>
+            ${escapeHTML(prediction.home)}
+          </strong>
 
-        <span class="prediction-time">
-          ${escapeHTML(prediction.time)}
-        </span>
+          <span>VS</span>
 
-      </div>
+          <strong>
+            ${escapeHTML(prediction.away)}
+          </strong>
 
-      <div class="prediction-match">
-
-        <div class="team">
-          ${escapeHTML(prediction.home)}
         </div>
 
-        <div class="vs">
-          VS
-        </div>
 
-        <div class="team">
-          ${escapeHTML(prediction.away)}
+        <div class="prediction-indication">
+
+          ${
+            premiumLocked
+              ? `
+                <div class="premium-lock">
+                  🔒 Indication Premium
+                </div>
+
+                <button
+                  type="button"
+                  onclick="contactPremium()"
+                >
+                  🔓 Débloquer Premium
+                </button>
+              `
+              : `
+                <strong>
+                  Indication :
+                </strong>
+
+                ${escapeHTML(
+                  prediction.indication
+                )}
+              `
+          }
+
         </div>
 
       </div>
-
-      <div class="prediction-free">
-
-        <strong>🎯 Indication gratuite</strong>
-
-        <p>
-          ${escapeHTML(prediction.free)}
-        </p>
-
-      </div>
-
-      ${premiumContent}
-
     `;
-
-    container.appendChild(card);
 
   });
 
+
+  container.innerHTML = html;
 }
 
 
 /* =========================================================
-   18. WHATSAPP POUR SOUSCRIPTION
-========================================================= */
-
-function openSubscriptionWhatsApp() {
-
-  const message =
-    "Bonjour WENDK PREDICT PRO,%0A%0A" +
-    "Je souhaite souscrire à l'abonnement Premium.%0A" +
-    "Merci de m'indiquer les tarifs et les modalités de paiement Mobile Money.";
-
-  window.open(
-    WHATSAPP_URL + "?text=" + message,
-    "_blank"
-  );
-}
-
-
-/* =========================================================
-   19. ESPACE MEMBRE
+   21. ESPACE MEMBRE
 ========================================================= */
 
 async function renderMemberDashboard() {
 
-  const user = await getCurrentUser();
+  const user =
+    await getCurrentUser();
+
 
   if (!user) {
 
@@ -1138,200 +1142,342 @@ async function renderMemberDashboard() {
     return;
   }
 
-  const welcome =
-    document.getElementById("memberWelcome");
 
-  const status =
-    document.getElementById("memberStatus");
+  const profile =
+    await getProfile(user.id);
 
-  const expiration =
-    document.getElementById("memberExpiration");
 
-  const whatsapp =
-    document.getElementById("memberWhatsapp");
+  const subscription =
+    await getActiveSubscription(user.id);
 
-  if (welcome) {
 
-    welcome.textContent =
-      "Bienvenue, " +
-      (user.name || "Membre") +
-      " 👋";
+  const name =
+    profile?.name ||
+    user.user_metadata?.name ||
+    user.email ||
+    "Membre";
 
-  }
 
-  if (whatsapp) {
+  if ($("memberWelcome")) {
 
-    whatsapp.textContent =
-      user.whatsapp || "Non renseigné";
-
+    $("memberWelcome").textContent =
+      "Bienvenue " + name;
   }
 
 
-  /* =====================================================
-     VÉRIFICATION PREMIUM
-  ===================================================== */
+  if ($("memberWhatsapp")) {
 
-  const premium =
-    await checkPremiumStatus(user.id);
+    $("memberWhatsapp").textContent =
+      profile?.whatsapp ||
+      user.user_metadata?.whatsapp ||
+      "Non renseigné";
+  }
 
 
-  if (premium.premium) {
+  if (subscription) {
 
-    if (status) {
+    if ($("memberStatus")) {
 
-      status.innerHTML =
-        `<span class="premium-status">
-          ⭐ PREMIUM ACTIF
-        </span>`;
-
+      $("memberStatus").innerHTML =
+        "🟢 <strong>PREMIUM ACTIF</strong>";
     }
 
-    if (expiration) {
 
-      expiration.textContent =
-        "Expire le : " +
-        formatDate(premium.expiration);
+    if ($("memberExpiration")) {
 
+      $("memberExpiration").textContent =
+        formatDateTime(
+          subscription.expires_at
+        );
     }
 
   } else {
 
-    if (status) {
+    if ($("memberStatus")) {
 
-      status.innerHTML =
-        `<span class="free-status">
-          🔒 COMPTE GRATUIT
-        </span>`;
-
+      $("memberStatus").innerHTML =
+        "⚪ <strong>GRATUIT</strong>";
     }
 
-    if (expiration) {
 
-      expiration.textContent =
-        "Aucun abonnement Premium actif.";
+    if ($("memberExpiration")) {
 
+      $("memberExpiration").textContent =
+        "Aucun abonnement Premium actif";
     }
-
   }
 
 
-  /* =====================================================
-     HISTORIQUE DES ABONNEMENTS
-  ===================================================== */
-
   await renderMemberHistory(user.id);
-
 }
 
 
 /* =========================================================
-   20. HISTORIQUE PREMIUM DU MEMBRE
+   22. HISTORIQUE DU MEMBRE
 ========================================================= */
 
 async function renderMemberHistory(userId) {
 
   const container =
-    document.getElementById("memberHistory");
+    $("memberHistory");
 
-  if (!container) return;
-
-  try {
-
-    const { data, error } =
-      await supabaseClient
-        .from("subscriptions")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", {
-          ascending: false
-        });
-
-    if (error) {
-
-      console.error(
-        "Erreur historique:",
-        error
-      );
-
-      container.innerHTML =
-        "<p>Impossible de charger l'historique.</p>";
-
-      return;
-    }
-
-
-    if (!data || data.length === 0) {
-
-      container.innerHTML =
-        "<p>Aucun abonnement enregistré.</p>";
-
-      return;
-    }
-
-
-    container.innerHTML = `
-
-      <h3>📋 Historique Premium</h3>
-
-      ${data.map(item => `
-
-        <div class="history-item">
-
-          <strong>
-            ${escapeHTML(
-              item.action || "Abonnement"
-            )}
-          </strong>
-
-          <p>
-            Durée :
-            ${escapeHTML(item.days || 0)}
-            jour(s)
-          </p>
-
-          <p>
-            Début :
-            ${formatDate(item.start_at)}
-          </p>
-
-          <p>
-            Expiration :
-            ${formatDate(item.expires_at)}
-          </p>
-
-          <small>
-            Enregistré le
-            ${formatDateTime(item.created_at)}
-          </small>
-
-        </div>
-
-      `).join("")}
-
-    `;
-
-  } catch (error) {
-
-    console.error(
-      "Erreur historique:",
-      error
-    );
-
-    container.innerHTML =
-      "<p>Erreur lors du chargement.</p>";
+  if (!container) {
+    return;
   }
 
+
+  container.innerHTML =
+    "<p>Chargement de l'historique...</p>";
+
+
+  const [
+    paymentsResult,
+    subscriptionsResult
+  ] = await Promise.all([
+
+    supabaseClient
+      .from("payments")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", {
+        ascending: false
+      }),
+
+    supabaseClient
+      .from("subscriptions")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", {
+        ascending: false
+      })
+
+  ]);
+
+
+  if (paymentsResult.error) {
+
+    console.error(
+      "Erreur paiements membre :",
+      paymentsResult.error
+    );
+  }
+
+
+  if (subscriptionsResult.error) {
+
+    console.error(
+      "Erreur abonnements membre :",
+      subscriptionsResult.error
+    );
+  }
+
+
+  const payments =
+    paymentsResult.data || [];
+
+  const subscriptions =
+    subscriptionsResult.data || [];
+
+
+  if (
+    payments.length === 0 &&
+    subscriptions.length === 0
+  ) {
+
+    container.innerHTML =
+      "<p>Aucun historique disponible.</p>";
+
+    return;
+  }
+
+
+  let html = `
+    <div class="member-history-list">
+  `;
+
+
+  subscriptions.forEach(subscription => {
+
+    html += `
+      <div class="history-item">
+
+        <strong>
+          ${escapeHTML(
+            subscription.action ||
+            "Abonnement Premium"
+          )}
+        </strong>
+
+        <p>
+          Durée :
+          ${escapeHTML(
+            subscription.days || 0
+          )} jours
+        </p>
+
+        <p>
+          Expiration :
+          ${formatDateTime(
+            subscription.expires_at
+          )}
+        </p>
+
+        <small>
+          ${formatDateTime(
+            subscription.created_at
+          )}
+        </small>
+
+      </div>
+    `;
+
+  });
+
+
+  payments.forEach(payment => {
+
+    html += `
+      <div class="history-item">
+
+        <strong>
+          Paiement
+        </strong>
+
+        <p>
+          Montant :
+          ${Number(
+            payment.amount || 0
+          ).toLocaleString("fr-FR")} FCFA
+        </p>
+
+        <p>
+          Méthode :
+          ${escapeHTML(
+            payment.method || "Non précisée"
+          )}
+        </p>
+
+        <p>
+          Statut :
+          ${
+            payment.verified
+              ? "✅ Vérifié"
+              : "⏳ En attente"
+          }
+        </p>
+
+        <small>
+          ${formatDateTime(
+            payment.created_at
+          )}
+        </small>
+
+      </div>
+    `;
+
+  });
+
+
+  html += `
+    </div>
+  `;
+
+
+  container.innerHTML = html;
 }
 
 
 /* =========================================================
-   21. ENVOYER UNE DEMANDE DE PAIEMENT
+   23. DEMANDE PREMIUM
 ========================================================= */
 
-async function submitPaymentRequest() {
+function submitPaymentRequest() {
+
+  const message =
+    [
+      "Bonjour WENDK PREDICT PRO.",
+      "",
+      "Je souhaite souscrire à l'abonnement Premium.",
+      "",
+      "Je vais effectuer mon paiement Mobile Money et envoyer la preuve de paiement ici.",
+      "",
+      "Merci."
+    ].join("\n");
+
+
+  const url =
+    WHATSAPP_URL +
+    "?text=" +
+    encodeURIComponent(message);
+
+
+  window.open(
+    url,
+    "_blank"
+  );
+}
+
+
+/* =========================================================
+   24. AFFICHER / MASQUER MOT DE PASSE
+========================================================= */
+
+function togglePassword(inputId, button) {
+
+  const input =
+    $(inputId);
+
+  if (!input) {
+    return;
+  }
+
+
+  if (input.type === "password") {
+
+    input.type = "text";
+
+    if (button) {
+      button.textContent = "🙈";
+    }
+
+  } else {
+
+    input.type = "password";
+
+    if (button) {
+      button.textContent = "👁️";
+    }
+  }
+}
+
+
+/* =========================================================
+   25. OUVRIR LE FORMULAIRE DE CONNEXION
+========================================================= */
+
+function openLogin() {
+  showSection("login");
+}
+
+
+/* =========================================================
+   26. OUVRIR LE FORMULAIRE D'INSCRIPTION
+========================================================= */
+
+function openRegister() {
+  showSection("register");
+}
+
+
+/* =========================================================
+   27. OUVRIR L'ESPACE MEMBRE
+========================================================= */
+
+async function openMemberDashboard() {
 
   const user =
     await getCurrentUser();
+
 
   if (!user) {
 
@@ -1341,801 +1487,419 @@ async function submitPaymentRequest() {
   }
 
 
-  const amount =
-    parseInt(
-      document.getElementById("paymentAmount")?.value || 0
-    );
+  showSection("memberDashboard");
 
-  const method =
-    document.getElementById("paymentMethod")?.value ||
-    "Mobile Money";
-
-  const reference =
-    document.getElementById("paymentReference")?.value.trim() ||
-    "Non fournie";
-
-  const note =
-    document.getElementById("paymentNote")?.value.trim() ||
-    "";
+  await renderMemberDashboard();
+}
 
 
-  if (!amount || amount <= 0) {
+/* =========================================================
+   28. OUVRIR L'ESPACE ADMIN
+========================================================= */
 
-    showMessage(
-      "adminActionMessage",
-      "Veuillez saisir un montant valide.",
-      "error-message"
-    );
+async function openAdminDashboard() {
+
+  const user =
+    await getCurrentUser();
+
+
+  if (!user) {
+
+    showSection("adminLogin");
 
     return;
   }
 
 
-  try {
-
-    const { data, error } =
-      await supabaseClient
-        .from("payments")
-        .insert({
-
-          user_id: user.id,
-
-          amount: amount,
-
-          method: method,
-
-          reference: reference,
-
-          note: note,
-
-          verified: false
-
-        })
-        .select()
-        .single();
+  const profile =
+    await getProfile(user.id);
 
 
-    if (error) {
+  if (!profile || profile.role !== "admin") {
 
-      console.error(
-        "Erreur paiement:",
-        error
-      );
+    showSection("adminLogin");
 
-      showMessage(
-        "adminActionMessage",
-        "Impossible d'enregistrer le paiement.",
-        "error-message"
-      );
-
-      return;
-    }
-
-
-    showMessage(
-      "adminActionMessage",
-      "✅ Paiement enregistré. Il sera vérifié par l'administration.",
-      "success-message"
-    );
-
-
-    return data;
-
-  } catch (error) {
-
-    console.error(
-      "Erreur paiement:",
-      error
-    );
-
-    showMessage(
-      "adminActionMessage",
-      "Une erreur est survenue.",
-      "error-message"
-    );
-
+    return;
   }
 
+
+  showSection("adminDashboard");
+
+  await renderAdminDashboard();
 }
 
 
 /* =========================================================
-   22. RÉCUPÉRER LES PAIEMENTS DU MEMBRE
+   29. EXPORT DES FONCTIONS
 ========================================================= */
 
-async function getMemberPayments(userId) {
+window.getCurrentUser =
+  getCurrentUser;
 
-  if (!userId) return [];
+window.getProfile =
+  getProfile;
 
-  try {
+window.getActiveSubscription =
+  getActiveSubscription;
 
-    const { data, error } =
-      await supabaseClient
-        .from("payments")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", {
-          ascending: false
-        });
+window.checkPremium =
+  checkPremium;
 
-    if (error) {
+window.getPremiumExpiration =
+  getPremiumExpiration;
 
-      console.error(
-        "Erreur paiements:",
-        error
-      );
+window.renderPredictions =
+  renderPredictions;
 
-      return [];
-    }
+window.renderMemberDashboard =
+  renderMemberDashboard;
 
-    return data || [];
+window.renderMemberHistory =
+  renderMemberHistory;
 
-  } catch (error) {
+window.submitPaymentRequest =
+  submitPaymentRequest;
 
-    console.error(
-      "Erreur récupération paiements:",
-      error
-    );
+window.togglePassword =
+  togglePassword;
 
-    return [];
-  }
+window.openLogin =
+  openLogin;
 
-}
+window.openRegister =
+  openRegister;
+
+window.openMemberDashboard =
+  openMemberDashboard;
+
+window.openAdminDashboard =
+  openAdminDashboard;
 
 
 /* =========================================================
-   23. RAFRAÎCHIR LES PRÉDICTIONS APRÈS CONNEXION
+   FIN DU BLOC 2/3
+========================================================= */
+/* =========================================================
+   WENDK PREDICT PRO V3
+   SCRIPT.JS — BLOC 3/3
+   ADMIN + MEMBRES + PAIEMENTS + PREMIUM
 ========================================================= */
 
-async function refreshPremiumAccess() {
+
+/* =========================================================
+   30. VÉRIFICATION ADMIN
+========================================================= */
+
+async function requireAdmin() {
 
   const user =
     await getCurrentUser();
 
   if (!user) {
 
-    await renderPredictions();
+    showSection("adminLogin");
 
-    return;
+    return null;
   }
 
-  await checkPremiumExpiration(user);
 
-  await renderPredictions();
+  const profile =
+    await getProfile(user.id);
 
-  if (
-    document.getElementById("memberDashboard")
-      ?.classList.contains("active")
-  ) {
 
-    await renderMemberDashboard();
+  if (!profile || profile.role !== "admin") {
 
+    showSection("adminLogin");
+
+    return null;
   }
 
+
+  return {
+    user,
+    profile
+  };
 }
 
 
 /* =========================================================
-   24. FORMULAIRE DE PAIEMENT MEMBRE
+   31. RÉCUPÉRER LES MEMBRES
 ========================================================= */
 
-function openPaymentWhatsApp() {
+async function getMembers() {
 
-  const userMessage =
-    "Bonjour WENDK PREDICT PRO,%0A%0A" +
-    "Je viens d'effectuer mon paiement Mobile Money " +
-    "pour l'abonnement Premium.%0A%0A" +
-    "Nom : " +
-    encodeURIComponent(
-      document.getElementById("registerName")?.value || ""
-    ) +
-    "%0A%0A" +
-    "Je vais envoyer la preuve de paiement ici.";
-
-  window.open(
-    WHATSAPP_URL +
-    "?text=" +
-    userMessage,
-    "_blank"
-  );
-
-}
-
-
-/* =========================================================
-   25. INITIALISATION DU BLOC 2
-========================================================= */
-
-async function initPremiumSystem() {
-
-  try {
-
-    const user =
-      await getCurrentUser();
-
-    if (user) {
-
-      await checkPremiumExpiration(user);
-
-    }
-
-    await renderPredictions();
-
-  } catch (error) {
-
-    console.error(
-      "Erreur système Premium:",
-      error
-    );
-
-  }
-
-   }
-/* =========================================================
-   WENDK PREDICT PRO V3
-   SCRIPT.JS — BLOC 3/3
-   ADMINISTRATION + PAIEMENTS + PREMIUM
-========================================================= */
-
-
-/* =========================================================
-   26. VÉRIFIER SI L'UTILISATEUR EST ADMIN
-========================================================= */
-
-async function isAdmin() {
-
-  const user = await getCurrentUser();
-
-  if (!user || !user.id) {
-    return false;
-  }
-
-  try {
-
-    const { data, error } = await supabaseClient
+  const { data, error } =
+    await supabaseClient
       .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (error) {
-      console.error("Erreur vérification admin:", error);
-      return false;
-    }
-
-    return data?.role === "admin";
-
-  } catch (error) {
-
-    console.error("Erreur admin:", error);
-
-    return false;
-  }
-}
-
-
-/* =========================================================
-   27. CONNEXION ADMIN
-========================================================= */
-
-async function adminLogin(event) {
-
-  event.preventDefault();
-
-  const username =
-    document.getElementById("adminUsername")?.value.trim();
-
-  const password =
-    document.getElementById("adminPassword")?.value;
-
-  const message =
-    document.getElementById("adminLoginMessage");
-
-
-  if (!username || !password) {
-
-    showMessage(
-      "adminLoginMessage",
-      "Veuillez remplir tous les champs.",
-      "error-message"
-    );
-
-    return;
-  }
-
-
-  if (message) {
-
-    message.className = "success-message";
-    message.textContent = "Connexion administrateur...";
-
-  }
-
-
-  try {
-
-    /*
-     * Le champ adminUsername accepte l'adresse
-     * email du compte administrateur Supabase.
-     */
-
-    const { data, error } =
-      await supabaseClient.auth.signInWithPassword({
-
-        email: username.toLowerCase(),
-
-        password: password
-
+      .select("*")
+      .eq("role", "member")
+      .order("created_at", {
+        ascending: false
       });
 
 
-    if (error) {
-
-      console.error(
-        "Erreur connexion admin:",
-        error
-      );
-
-      showMessage(
-        "adminLoginMessage",
-        "Identifiants administrateur incorrects.",
-        "error-message"
-      );
-
-      return;
-    }
-
-
-    if (!data?.user) {
-
-      showMessage(
-        "adminLoginMessage",
-        "Compte administrateur introuvable.",
-        "error-message"
-      );
-
-      return;
-    }
-
-
-    const admin =
-      await getCurrentUser();
-
-
-    if (!admin || admin.role !== "admin") {
-
-      await supabaseClient.auth.signOut();
-
-      showMessage(
-        "adminLoginMessage",
-        "⛔ Ce compte n'a pas les droits administrateur.",
-        "error-message"
-      );
-
-      return;
-    }
-
-
-    showMessage(
-      "adminLoginMessage",
-      "✅ Connexion administrateur réussie.",
-      "success-message"
-    );
-
-
-    setTimeout(() => {
-
-      showSection("adminDashboard");
-
-    }, 500);
-
-
-  } catch (error) {
+  if (error) {
 
     console.error(
-      "Erreur admin login:",
-      error
-    );
-
-    showMessage(
-      "adminLoginMessage",
-      "Une erreur est survenue.",
-      "error-message"
-    );
-
-  }
-
-}
-
-
-/* =========================================================
-   28. DÉCONNEXION ADMIN
-========================================================= */
-
-async function adminLogout() {
-
-  try {
-
-    await supabaseClient.auth.signOut();
-
-  } catch (error) {
-
-    console.error(
-      "Erreur déconnexion admin:",
-      error
-    );
-
-  }
-
-  showSection("home");
-}
-
-
-/* =========================================================
-   29. CHARGER LES MEMBRES
-========================================================= */
-
-async function getAllMembers() {
-
-  try {
-
-    const { data, error } =
-      await supabaseClient
-        .from("profiles")
-        .select("*")
-        .order("created_at", {
-          ascending: false
-        });
-
-
-    if (error) {
-
-      console.error(
-        "Erreur membres:",
-        error
-      );
-
-      return [];
-
-    }
-
-
-    return data || [];
-
-
-  } catch (error) {
-
-    console.error(
-      "Erreur récupération membres:",
+      "Erreur membres :",
       error
     );
 
     return [];
-
   }
 
+
+  return data || [];
 }
 
 
 /* =========================================================
-   30. CHARGER LES PAIEMENTS
+   32. RÉCUPÉRER LES PAIEMENTS
 ========================================================= */
 
 async function getAllPayments() {
 
-  try {
-
-    const { data, error } =
-      await supabaseClient
-        .from("payments")
-        .select(`
-          *,
-          profiles!payments_user_id_fkey(
-            id,
-            name,
-            whatsapp
-          )
-        `)
-        .order("created_at", {
-          ascending: false
-        });
+  const { data, error } =
+    await supabaseClient
+      .from("payments")
+      .select("*")
+      .order("created_at", {
+        ascending: false
+      });
 
 
-    if (error) {
-
-      console.error(
-        "Erreur paiements admin:",
-        error
-      );
-
-      return [];
-
-    }
-
-
-    return data || [];
-
-
-  } catch (error) {
+  if (error) {
 
     console.error(
-      "Erreur récupération paiements:",
+      "Erreur paiements :",
       error
     );
 
     return [];
-
   }
 
+
+  return data || [];
 }
 
 
 /* =========================================================
-   31. CALCULER LE NOMBRE DE MEMBRES PREMIUM
+   33. RÉCUPÉRER LES ABONNEMENTS
 ========================================================= */
 
-async function countPremiumMembers(members) {
+async function getAllSubscriptions() {
 
-  let premiumCount = 0;
+  const { data, error } =
+    await supabaseClient
+      .from("subscriptions")
+      .select("*")
+      .order("created_at", {
+        ascending: false
+      });
 
-  for (const member of members) {
 
-    if (member.role === "admin") {
-      continue;
-    }
+  if (error) {
 
-    const subscription =
-      await getActiveSubscription(member.id);
+    console.error(
+      "Erreur abonnements :",
+      error
+    );
 
-    if (subscription) {
-      premiumCount++;
-    }
-
+    return [];
   }
 
-  return premiumCount;
+
+  return data || [];
 }
 
 
 /* =========================================================
-   32. AFFICHER LE TABLEAU DE BORD ADMIN
+   34. DASHBOARD ADMIN
 ========================================================= */
 
 async function renderAdminDashboard() {
 
-  const admin =
-    await getCurrentUser();
+  const auth =
+    await requireAdmin();
 
 
-  if (!admin || admin.role !== "admin") {
-
-    showSection("adminLogin");
-
+  if (!auth) {
     return;
-
   }
 
 
   const members =
-    await getAllMembers();
+    await getMembers();
 
   const payments =
     await getAllPayments();
 
-
-  const premiumCount =
-    await countPremiumMembers(members);
-
-
-  const memberCount =
-    members.filter(
-      member => member.role !== "admin"
-    ).length;
+  const subscriptions =
+    await getAllSubscriptions();
 
 
-  const verifiedPayments =
-    payments.filter(
-      payment => payment.verified === true
-    ).length;
+  const now =
+    new Date();
 
 
-  const premiumElement =
-    document.getElementById("premiumMembers");
+  let premiumCount = 0;
 
-  const totalMembersElement =
-    document.getElementById("totalMembers");
-
-  const expiredElement =
-    document.getElementById("expiredMembers");
-
-  const totalPaymentsElement =
-    document.getElementById("totalPayments");
+  let expiredCount = 0;
 
 
-  if (totalMembersElement) {
+  members.forEach(member => {
 
-    totalMembersElement.textContent =
-      memberCount;
+    const active =
+      subscriptions.find(subscription => {
 
+        return (
+          subscription.user_id === member.id &&
+          new Date(
+            subscription.expires_at
+          ) > now
+        );
+
+      });
+
+
+    if (active) {
+      premiumCount++;
+    } else {
+      expiredCount++;
+    }
+
+  });
+
+
+  if ($("totalMembers")) {
+
+    $("totalMembers").textContent =
+      members.length;
   }
 
 
-  if (premiumElement) {
+  if ($("premiumMembers")) {
 
-    premiumElement.textContent =
+    $("premiumMembers").textContent =
       premiumCount;
-
   }
 
 
-  if (totalPaymentsElement) {
+  if ($("expiredMembers")) {
 
-    totalPaymentsElement.textContent =
-      verifiedPayments;
-
+    $("expiredMembers").textContent =
+      expiredCount;
   }
 
 
-  if (expiredElement) {
+  if ($("totalPayments")) {
 
-    expiredElement.textContent =
-      Math.max(
-        0,
-        memberCount - premiumCount
-      );
-
+    $("totalPayments").textContent =
+      payments.length;
   }
 
 
-  await renderAdminMembers(members);
+  await renderAdminMembers(
+    members,
+    subscriptions
+  );
 
-  await renderAdminPayments(payments);
 
+  await renderAdminPayments(
+    payments,
+    members
+  );
 }
 
 
 /* =========================================================
-   33. AFFICHER LES MEMBRES DANS L'ADMIN
+   35. AFFICHER LES MEMBRES ADMIN
 ========================================================= */
 
-async function renderAdminMembers(members = null) {
+async function renderAdminMembers(
+  members,
+  subscriptions
+) {
 
   const container =
-    document.getElementById("adminMembers");
+    $("adminMembers");
 
-  if (!container) return;
-
-
-  if (!members) {
-
-    members =
-      await getAllMembers();
-
+  if (!container) {
+    return;
   }
 
 
-  const searchInput =
-    document.getElementById("memberSearch");
-
-  const search =
-    searchInput?.value.trim().toLowerCase() || "";
-
-
-  let filtered =
-    members.filter(member => {
-
-      if (member.role === "admin") {
-        return false;
-      }
-
-
-      if (!search) {
-        return true;
-      }
-
-
-      return (
-
-        String(member.name || "")
-          .toLowerCase()
-          .includes(search)
-
-        ||
-
-        String(member.whatsapp || "")
-          .toLowerCase()
-          .includes(search)
-
-        ||
-
-        String(member.id || "")
-          .toLowerCase()
-          .includes(search)
-
-      );
-
-    });
-
-
-  if (filtered.length === 0) {
+  if (!members.length) {
 
     container.innerHTML =
-      "<p>Aucun membre trouvé.</p>";
+      "<p>Aucun membre enregistré.</p>";
 
     return;
-
   }
 
 
-  let html = `
-
-    <div class="admin-list">
-
-      <h3>👥 Membres</h3>
-
-  `;
+  let html = "";
 
 
-  for (const member of filtered) {
+  members.forEach(member => {
+
+    const subscription =
+      subscriptions.find(
+        item =>
+          item.user_id === member.id &&
+          new Date(item.expires_at) >
+            new Date()
+      );
+
 
     const premium =
-      await getActiveSubscription(member.id);
-
-
-    const premiumStatus =
-      premium
-
-        ? `
-          <span class="premium-status">
-            ⭐ PREMIUM
-          </span>
-        `
-
-        : `
-          <span class="free-status">
-            GRATUIT
-          </span>
-        `;
+      !!subscription;
 
 
     html += `
-
       <div class="admin-member-item">
 
-        <div class="member-info">
+        <div>
 
           <strong>
             ${escapeHTML(
-              member.name || "Membre"
+              member.name ||
+              "Sans nom"
             )}
           </strong>
 
           <p>
             WhatsApp :
             ${escapeHTML(
-              member.whatsapp || "Non renseigné"
+              member.whatsapp ||
+              "Non renseigné"
             )}
           </p>
 
           <p>
-            Inscription :
+            Créé le :
             ${formatDate(
               member.created_at
             )}
           </p>
 
-          ${premiumStatus}
+          <p>
+            Statut :
+            ${
+              premium
+                ? "🟢 PREMIUM"
+                : "⚪ GRATUIT"
+            }
+          </p>
 
           ${
             premium
               ? `
                 <p>
                   Expire le :
-                  <strong>
-                    ${formatDate(
-                      premium.expires_at
-                    )}
-                  </strong>
+                  ${formatDateTime(
+                    subscription.expires_at
+                  )}
                 </p>
               `
               : ""
@@ -2144,238 +1908,141 @@ async function renderAdminMembers(members = null) {
         </div>
 
 
-        <div class="member-actions">
+        <div>
 
           <button
             type="button"
-            onclick="openAdminMemberModal('${member.id}')">
+            onclick="openAdminModal('${member.id}')"
+          >
             ⚙️ Gérer
           </button>
 
         </div>
 
       </div>
-
     `;
-
-  }
-
-
-  html += `
-
-    </div>
-
-  `;
+  });
 
 
   container.innerHTML = html;
-
 }
 
 
 /* =========================================================
-   34. RECHERCHE DES MEMBRES
+   36. AFFICHER LES PAIEMENTS ADMIN
 ========================================================= */
 
-function searchMembers() {
-
-  renderAdminMembers();
-
-}
-
-
-/* =========================================================
-   35. AFFICHER LES PAIEMENTS ADMIN
-========================================================= */
-
-async function renderAdminPayments(payments = null) {
+async function renderAdminPayments(
+  payments,
+  members
+) {
 
   const container =
-    document.getElementById("adminPayments");
+    $("adminPayments");
 
-  if (!container) return;
-
-
-  if (!payments) {
-
-    payments =
-      await getAllPayments();
-
+  if (!container) {
+    return;
   }
 
 
-  if (!payments || payments.length === 0) {
+  if (!payments.length) {
 
     container.innerHTML =
       "<p>Aucun paiement enregistré.</p>";
 
     return;
-
   }
 
 
-  let html = `
-
-    <div class="admin-list">
-
-      <h3>💰 Paiements</h3>
-
-  `;
+  let html = "";
 
 
   payments.forEach(payment => {
 
     const member =
-      payment.profiles || {};
-
-
-    const status =
-      payment.verified
-
-        ? `
-          <span class="premium-status">
-            ✅ VÉRIFIÉ
-          </span>
-        `
-
-        : `
-          <span class="free-status">
-            ⏳ EN ATTENTE
-          </span>
-        `;
+      members.find(
+        item =>
+          item.id === payment.user_id
+      );
 
 
     html += `
-
       <div class="admin-payment-item">
 
-        <div>
+        <strong>
+          ${escapeHTML(
+            member?.name ||
+            "Membre"
+          )}
+        </strong>
 
-          <strong>
-            ${escapeHTML(
-              member.name || "Membre"
-            )}
-          </strong>
+        <p>
+          Montant :
+          ${Number(
+            payment.amount || 0
+          ).toLocaleString("fr-FR")}
+          FCFA
+        </p>
 
-          <p>
-            WhatsApp :
-            ${escapeHTML(
-              member.whatsapp || "Non renseigné"
-            )}
-          </p>
+        <p>
+          Méthode :
+          ${escapeHTML(
+            payment.method ||
+            "Non précisée"
+          )}
+        </p>
 
-          <p>
-            Montant :
-            <strong>
-              ${Number(
-                payment.amount || 0
-              ).toLocaleString("fr-FR")}
-              FCFA
-            </strong>
-          </p>
+        <p>
+          Référence :
+          ${escapeHTML(
+            payment.reference ||
+            "Non fournie"
+          )}
+        </p>
 
-          <p>
-            Méthode :
-            ${escapeHTML(
-              payment.method || "Mobile Money"
-            )}
-          </p>
-
-          <p>
-            Référence :
-            ${escapeHTML(
-              payment.reference || "Non fournie"
-            )}
-          </p>
-
-          <p>
-            Date :
-            ${formatDateTime(
-              payment.created_at
-            )}
-          </p>
-
-          ${status}
-
-        </div>
-
-
-        <div class="payment-actions">
-
+        <p>
+          Statut :
           ${
             payment.verified
-
-              ? `
-
-                <button
-                  type="button"
-                  onclick="openAdminMemberModal('${payment.user_id}')">
-                  ⚙️ Gérer Premium
-                </button>
-
-              `
-
-              : `
-
-                <button
-                  type="button"
-                  onclick="verifyPayment('${payment.id}')">
-                  ✅ Vérifier
-                </button>
-
-                <button
-                  type="button"
-                  onclick="openAdminMemberModal('${payment.user_id}')">
-                  ⭐ Activer Premium
-                </button>
-
-              `
+              ? "✅ Vérifié"
+              : "⏳ En attente"
           }
+        </p>
 
-        </div>
+        <small>
+          ${formatDateTime(
+            payment.created_at
+          )}
+        </small>
 
       </div>
-
     `;
-
   });
 
 
-  html += `
-
-    </div>
-
-  `;
-
-
   container.innerHTML = html;
-
 }
 
 
 /* =========================================================
-   36. OUVRIR LA FENÊTRE ADMIN D'UN MEMBRE
+   37. OUVRIR MODAL ADMIN
 ========================================================= */
 
-async function openAdminMemberModal(userId) {
+async function openAdminModal(memberId) {
 
-  const admin =
-    await getCurrentUser();
+  const auth =
+    await requireAdmin();
 
 
-  if (!admin || admin.role !== "admin") {
-
-    alert(
-      "Accès administrateur requis."
-    );
-
+  if (!auth) {
     return;
-
   }
 
 
   const member =
-    await getProfile(userId);
+    (await getMembers()).find(
+      item => item.id === memberId
+    );
 
 
   if (!member) {
@@ -2385,521 +2052,699 @@ async function openAdminMemberModal(userId) {
     );
 
     return;
-
   }
 
 
-  const modal =
-    document.getElementById("adminModal");
+  if ($("adminModal")) {
 
-
-  if (!modal) {
-
-    console.error(
-      "adminModal introuvable dans le HTML."
-    );
-
-    return;
-
+    $("adminModal").style.display =
+      "flex";
   }
 
 
-  const info =
-    document.getElementById("selectedMemberInfo");
+  if ($("paymentMemberId")) {
+
+    $("paymentMemberId").value =
+      member.id;
+  }
 
 
-  if (info) {
+  if ($("selectedMemberInfo")) {
 
-    info.innerHTML = `
+    $("selectedMemberInfo").innerHTML = `
 
       <strong>
         ${escapeHTML(
-          member.name || "Membre"
+          member.name ||
+          "Sans nom"
         )}
       </strong>
 
-      <p>
-        WhatsApp :
-        ${escapeHTML(
-          member.whatsapp || "Non renseigné"
-        )}
-      </p>
+      <br>
 
-      <p>
-        ID :
-        ${escapeHTML(member.id)}
-      </p>
+      WhatsApp :
+      ${escapeHTML(
+        member.whatsapp ||
+        "Non renseigné"
+      )}
+
+      <br>
+
+      Email :
+      ${escapeHTML(
+        "Compte Supabase"
+      )}
 
     `;
-
   }
 
 
-  const memberIdField =
-    document.getElementById("paymentMemberId");
+  if ($("adminActionMessage")) {
 
-
-  if (memberIdField) {
-
-    memberIdField.value =
-      member.id;
-
+    $("adminActionMessage").textContent =
+      "";
   }
-
-
-  const subscription =
-    await getActiveSubscription(member.id);
-
-
-  const durationField =
-    document.getElementById("premiumDuration");
-
-  const customDaysField =
-    document.getElementById("customDays");
-
-
-  if (durationField) {
-
-    durationField.value =
-      subscription ? "30" : "30";
-
-  }
-
-
-  if (customDaysField) {
-
-    customDaysField.value = "";
-
-  }
-
-
-  const actionMessage =
-    document.getElementById("adminActionMessage");
-
-
-  if (actionMessage) {
-
-    actionMessage.textContent = "";
-
-  }
-
-
-  modal.classList.add("active");
-
-  modal.style.display = "flex";
-
 }
 
 
 /* =========================================================
-   37. FERMER LA FENÊTRE ADMIN
+   38. FERMER MODAL ADMIN
 ========================================================= */
 
 function closeAdminModal() {
 
   const modal =
-    document.getElementById("adminModal");
-
-  if (!modal) return;
+    $("adminModal");
 
 
-  modal.classList.remove("active");
+  if (modal) {
 
-  modal.style.display = "none";
-
+    modal.style.display =
+      "none";
+  }
 }
 
 
 /* =========================================================
-   38. OBTENIR LE NOMBRE DE JOURS PREMIUM
+   39. CALCULER LA DURÉE PREMIUM
 ========================================================= */
 
 function getPremiumDays() {
 
   const duration =
-    document.getElementById("premiumDuration");
-
-  const custom =
-    document.getElementById("customDays");
+    $("premiumDuration")?.value ||
+    "custom";
 
 
-  const selected =
-    duration?.value || "";
-
-
-  if (selected === "custom") {
-
-    const days =
-      parseInt(
-        custom?.value || 0
-      );
-
-    return days;
-
+  if (duration === "7") {
+    return 7;
   }
 
 
-  const days =
-    parseInt(selected);
+  if (duration === "15") {
+    return 15;
+  }
 
 
-  return Number.isFinite(days)
-    ? days
-    : 0;
+  if (duration === "30") {
+    return 30;
+  }
 
+
+  if (duration === "60") {
+    return 60;
+  }
+
+
+  if (duration === "90") {
+    return 90;
+  }
+
+
+  if (duration === "custom") {
+
+    const days =
+      Number(
+        $("customDays")?.value || 0
+      );
+
+
+    return days;
+  }
+
+
+  return 0;
 }
 
 
 /* =========================================================
-   39. ACTIVER / PROLONGER PREMIUM
+   40. ACTIVER / PROLONGER PREMIUM
 ========================================================= */
 
-async function activatePremium() {
+async function verifyPaymentAndActivatePremium() {
 
-  const admin =
-    await getCurrentUser();
+  const auth =
+    await requireAdmin();
 
 
-  if (!admin || admin.role !== "admin") {
-
-    showMessage(
-      "adminActionMessage",
-      "⛔ Accès administrateur requis.",
-      "error-message"
-    );
-
+  if (!auth) {
     return;
-
   }
 
 
   const userId =
-    document.getElementById(
-      "paymentMemberId"
-    )?.value;
+    $("paymentMemberId")?.value || "";
 
 
-  if (!userId) {
-
-    showMessage(
-      "adminActionMessage",
-      "Membre introuvable.",
-      "error-message"
+  const amount =
+    Number(
+      $("paymentAmount")?.value || 0
     );
 
-    return;
 
-  }
+  const method =
+    $("paymentMethod")?.value.trim() ||
+    "Mobile Money";
+
+
+  const reference =
+    $("paymentReference")?.value.trim() ||
+    "Non fournie";
+
+
+  const note =
+    $("paymentNote")?.value.trim() ||
+    "";
 
 
   const days =
     getPremiumDays();
 
 
+  if (!userId) {
+
+    showMessage(
+      "adminActionMessage",
+      "Aucun membre sélectionné.",
+      "error"
+    );
+
+    return;
+  }
+
+
+  if (!amount || amount <= 0) {
+
+    showMessage(
+      "adminActionMessage",
+      "Entrez le montant du paiement.",
+      "error"
+    );
+
+    return;
+  }
+
+
   if (!days || days <= 0) {
 
     showMessage(
       "adminActionMessage",
-      "Veuillez choisir une durée Premium valide.",
-      "error-message"
+      "Indiquez une durée Premium valide.",
+      "error"
     );
 
     return;
-
   }
+
+
+  showMessage(
+    "adminActionMessage",
+    "Enregistrement du paiement et activation Premium...",
+    "info"
+  );
 
 
   try {
 
-    const now =
+    /*
+      Vérification d'un abonnement
+      actuellement actif.
+    */
+
+    const currentSubscription =
+      await getActiveSubscription(
+        userId
+      );
+
+
+    let startAt =
       new Date();
 
 
-    const current =
-      await getActiveSubscription(userId);
-
-
-    let startDate =
-      now;
-
-
-    let expirationDate;
-
-
     /*
-     * Si le membre possède encore un Premium actif,
-     * on ajoute les nouveaux jours à son expiration.
-     */
+      Si le membre possède déjà un
+      Premium actif, la nouvelle durée
+      commence après son expiration.
+    */
 
-    if (current) {
+    if (currentSubscription) {
 
       const currentExpiration =
         new Date(
-          current.expires_at
+          currentSubscription.expires_at
         );
 
 
-      startDate =
-        currentExpiration;
+      if (
+        currentExpiration > startAt
+      ) {
 
-
-      expirationDate =
-        new Date(
-          currentExpiration.getTime() +
-          days * 24 * 60 * 60 * 1000
-        );
-
-    } else {
-
-      expirationDate =
-        new Date(
-          now.getTime() +
-          days * 24 * 60 * 60 * 1000
-        );
-
+        startAt =
+          currentExpiration;
+      }
     }
 
 
-    const { data, error } =
-      await supabaseClient
-        .from("subscriptions")
-        .insert({
-
-          user_id: userId,
-
-          start_at:
-            startDate.toISOString(),
-
-          expires_at:
-            expirationDate.toISOString(),
-
-          days: days,
-
-          action:
-            current
-              ? "Prolongation Premium"
-              : "Activation Premium",
-
-          created_by:
-            admin.id
-
-        })
-        .select()
-        .single();
+    const expiresAt =
+      new Date(startAt);
 
 
-    if (error) {
+    expiresAt.setDate(
+      expiresAt.getDate() +
+      days
+    );
+
+
+    /* -----------------------------------------
+       ENREGISTRER LE PAIEMENT
+    ----------------------------------------- */
+
+    const {
+      error: paymentError
+    } = await supabaseClient
+      .from("payments")
+      .insert({
+
+        user_id: userId,
+
+        amount: amount,
+
+        method: method,
+
+        reference: reference,
+
+        note: note,
+
+        verified: true,
+
+        verified_by: auth.user.id
+
+      });
+
+
+    if (paymentError) {
 
       console.error(
-        "Erreur activation Premium:",
-        error
+        "Erreur paiement :",
+        paymentError
       );
 
-      showMessage(
-        "adminActionMessage",
-        "❌ Impossible d'activer le Premium.",
-        "error-message"
+      throw paymentError;
+    }
+
+
+    /* -----------------------------------------
+       CRÉER L'ABONNEMENT
+    ----------------------------------------- */
+
+    const {
+      error: subscriptionError
+    } = await supabaseClient
+      .from("subscriptions")
+      .insert({
+
+        user_id: userId,
+
+        start_at:
+          startAt.toISOString(),
+
+        expires_at:
+          expiresAt.toISOString(),
+
+        days: days,
+
+        action:
+          currentSubscription
+            ? "Extension Premium"
+            : "Activation Premium",
+
+        created_by:
+          auth.user.id
+
+      });
+
+
+    if (subscriptionError) {
+
+      console.error(
+        "Erreur abonnement :",
+        subscriptionError
       );
 
-      return;
-
+      throw subscriptionError;
     }
 
 
     showMessage(
       "adminActionMessage",
-      "✅ Premium activé jusqu'au " +
-      formatDate(
-        expirationDate
-      ) +
-      ".",
-      "success-message"
+      "✅ Paiement vérifié et Premium activé avec succès jusqu'au " +
+        formatDateTime(
+          expiresAt
+        ),
+      "success"
     );
 
-
-    await renderAdminDashboard();
-
-    await renderPredictions();
-
-
-    setTimeout(() => {
-
-      closeAdminModal();
-
-    }, 1200);
-
-
-    return data;
-
-
-  } catch (error) {
-
-    console.error(
-      "Erreur Premium:",
-      error
-    );
-
-    showMessage(
-      "adminActionMessage",
-      "Une erreur est survenue.",
-      "error-message"
-    );
-
-  }
-
-}
-
-
-/* =========================================================
-   40. VÉRIFIER UN PAIEMENT
-========================================================= */
-
-async function verifyPayment(paymentId) {
-
-  const admin =
-    await getCurrentUser();
-
-
-  if (!admin || admin.role !== "admin") {
-
-    alert(
-      "Accès administrateur requis."
-    );
-
-    return;
-
-  }
-
-
-  if (!paymentId) {
-
-    return;
-
-  }
-
-
-  const confirmation =
-    confirm(
-      "Confirmer la vérification de ce paiement ?"
-    );
-
-
-  if (!confirmation) {
-
-    return;
-
-  }
-
-
-  try {
-
-    const { error } =
-      await supabaseClient
-        .from("payments")
-        .update({
-
-          verified: true,
-
-          verified_by: admin.id
-
-        })
-        .eq("id", paymentId);
-
-
-    if (error) {
-
-      console.error(
-        "Erreur vérification paiement:",
-        error
-      );
-
-      alert(
-        "Impossible de vérifier le paiement."
-      );
-
-      return;
-
-    }
-
-
-    alert(
-      "✅ Paiement vérifié avec succès."
-    );
-
-
-    await renderAdminDashboard();
-
-
-  } catch (error) {
-
-    console.error(
-      "Erreur paiement:",
-      error
-    );
-
-    alert(
-      "Une erreur est survenue."
-    );
-
-  }
-
-}
-
-
-/* =========================================================
-   41. DÉSACTIVER LE PREMIUM
-========================================================= */
-
-async function deactivatePremium(userId) {
-
-  const admin =
-    await getCurrentUser();
-
-
-  if (!admin || admin.role !== "admin") {
-
-    alert(
-      "Accès administrateur requis."
-    );
-
-    return;
-
-  }
-
-
-  if (!userId) {
-
-    userId =
-      document.getElementById(
-        "paymentMemberId"
-      )?.value;
-
-  }
-
-
-  if (!userId) {
-
-    return;
-
-  }
-
-
-  const confirmation =
-    confirm(
-      "Voulez-vous désactiver le Premium de ce membre ?"
-    );
-
-
-  if (!confirmation) {
-
-    return;
-
-  }
-
-
-  try {
 
     /*
-     * On ne supprime pas l'historique.
-     * On expire simplement l'abonnement actif.
-     
+      Actualiser le dashboard.
+    */
+
+    await renderAdminDashboard();
+
+
+    /*
+      Actualiser le formulaire
+      membre si besoin.
+    */
+
+    const currentUser =
+      await getCurrentUser();
+
+
+    if (
+      currentUser &&
+      currentUser.id === userId
+    ) {
+
+      await renderMemberDashboard();
+    }
+
+
+  } catch (error) {
+
+    console.error(
+      "Erreur activation Premium :",
+      error
+    );
+
+
+    showMessage(
+      "adminActionMessage",
+      "Erreur : " +
+        (
+          error.message ||
+          "Impossible d'activer Premium."
+        ),
+      "error"
+    );
+  }
+}
+
+
+/* =========================================================
+   41. DÉSACTIVER PREMIUM
+========================================================= */
+
+async function disablePremium() {
+
+  const auth =
+    await requireAdmin();
+
+
+  if (!auth) {
+    return;
+  }
+
+
+  const userId =
+    $("paymentMemberId")?.value || "";
+
+
+  if (!userId) {
+
+    showMessage(
+      "adminActionMessage",
+      "Aucun membre sélectionné.",
+      "error"
+    );
+
+    return;
+  }
+
+
+  const subscription =
+    await getActiveSubscription(
+      userId
+    );
+
+
+  if (!subscription) {
+
+    showMessage(
+      "adminActionMessage",
+      "Ce membre n'a pas de Premium actif.",
+      "info"
+    );
+
+    return;
+  }
+
+
+  const {
+    error
+  } = await supabaseClient
+    .from("subscriptions")
+    .update({
+
+      expires_at:
+        new Date().toISOString()
+
+    })
+    .eq(
+      "id",
+      subscription.id
+    );
+
+
+  if (error) {
+
+    console.error(
+      "Erreur désactivation :",
+      error
+    );
+
+
+    showMessage(
+      "adminActionMessage",
+      "Impossible de désactiver Premium.",
+      "error"
+    );
+
+    return;
+  }
+
+
+  showMessage(
+    "adminActionMessage",
+    "Premium désactivé.",
+    "success"
+  );
+
+
+  await renderAdminDashboard();
+}
+
+
+/* =========================================================
+   42. RECHERCHE MEMBRE
+========================================================= */
+
+async function searchAdminMembers() {
+
+  const auth =
+    await requireAdmin();
+
+
+  if (!auth) {
+    return;
+  }
+
+
+  const search =
+    $("memberSearch")?.value
+      .trim()
+      .toLowerCase() || "";
+
+
+  const members =
+    await getMembers();
+
+
+  const subscriptions =
+    await getAllSubscriptions();
+
+
+  if (!search) {
+
+    await renderAdminMembers(
+      members,
+      subscriptions
+    );
+
+    return;
+  }
+
+
+  const filtered =
+    members.filter(member => {
+
+      const name =
+        (
+          member.name || ""
+        ).toLowerCase();
+
+
+      const whatsapp =
+        (
+          member.whatsapp || ""
+        ).toLowerCase();
+
+
+      return (
+        name.includes(search) ||
+        whatsapp.includes(search)
+      );
+
+    });
+
+
+  await renderAdminMembers(
+    filtered,
+    subscriptions
+  );
+}
+
+
+/* =========================================================
+   43. ÉCOUTEUR RECHERCHE
+========================================================= */
+
+document.addEventListener(
+  "DOMContentLoaded",
+  () => {
+
+    const searchInput =
+      $("memberSearch");
+
+
+    if (searchInput) {
+
+      searchInput.addEventListener(
+        "input",
+        searchAdminMembers
+      );
+    }
+
+
+    /*
+      Afficher l'accueil au démarrage
+      si aucune section n'est déjà visible.
+    */
+
+    const visibleSection =
+      document.querySelector(
+        ".section[style*='display: block']"
+      );
+
+
+    if (!visibleSection) {
+
+      const home =
+        $("home");
+
+      if (home) {
+        home.style.display =
+          "block";
+      }
+    }
+
+
+    /*
+      Vérifier la session Supabase.
+    */
+
+    setTimeout(
+      handleAuthState,
+      100
+    );
+
+  }
+);
+
+
+/* =========================================================
+   44. FERMETURE DU MODAL EN CLIQUANT À L'EXTÉRIEUR
+========================================================= */
+
+document.addEventListener(
+  "click",
+  event => {
+
+    const modal =
+      $("adminModal");
+
+
+    if (
+      modal &&
+      event.target === modal
+    ) {
+
+      closeAdminModal();
+    }
+
+  }
+);
+
+
+/* =========================================================
+   45. EXPORT FINAL DES FONCTIONS
+========================================================= */
+
+window.requireAdmin =
+  requireAdmin;
+
+window.getMembers =
+  getMembers;
+
+window.getAllPayments =
+  getAllPayments;
+
+window.getAllSubscriptions =
+  getAllSubscriptions;
+
+window.renderAdminDashboard =
+  renderAdminDashboard;
+
+window.renderAdminMembers =
+  renderAdminMembers;
+
+window.renderAdminPayments =
+  renderAdminPayments;
+
+window.openAdminModal =
+  openAdminModal;
+
+window.closeAdminModal =
+  closeAdminModal;
+
+window.getPremiumDays =
+  getPremiumDays;
+
+window.verifyPaymentAndActivatePremium =
+  verifyPaymentAndActivatePremium;
+
+window.disablePremium =
+  disablePremium;
+
+window.searchAdminMembers =
+  searchAdminMembers;
+
+
+/* =========================================================
+   WENDK PREDICT PRO V3
+   SCRIPT.JS COMPLET — FIN
+========================================================= */
+
+console.log(
+  "WENDK PREDICT PRO V3 — Supabase connecté"
+);
